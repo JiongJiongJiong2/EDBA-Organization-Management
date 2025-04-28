@@ -78,12 +78,12 @@ def download_document(doc_id):
 def admin_approve_application(app_id):
     if 'user_id' not in session or session.get('user_type') not in ['EE', 'SE']:
         flash('Unauthorized access', 'error')
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     application = db.session.get(Application, app_id)
     if not application:
         flash('Application not found', 'error')
-        return redirect(url_for('admin_applications'))
+        return redirect(url_for('admin.admin_applications'))
 
     try:
         # E-Admin can approve status 0 (pending), Senior E-Admin can approve status 1 (E-Admin approved)
