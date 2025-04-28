@@ -52,7 +52,7 @@
                 <button onclick="toggleConfigForm('{{ service.service_id }}')">Configuration</button>
                 
                 <div id="form-{{ service.service_id }}" class="config-form">
-                    <form action="{{ url_for('submit_configuration', service_id=service.service_id) }}" method="post">
+                    <form action="{{ url_for('oconvener.submit_configuration', service_id=service.service_id) }}" method="post">
                         <div>
                             <label for="url-{{ service.service_id }}">API Base URL:</label>
                             <input type="text" id="url-{{ service.service_id }}" name="url" 
@@ -86,6 +86,6 @@
     {% endif %}
     
     <br>
-    <a href="{{ url_for('dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
 </body>
 </html>

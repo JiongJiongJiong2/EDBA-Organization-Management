@@ -69,7 +69,7 @@
             {% if documents %}
                 {% for doc in documents %}
                 <div class="document-item">
-                    <a href="{{ url_for('download_document', doc_id=doc.id) }}">{{ doc.original_filename }}</a>
+                    <a href="{{ url_for('admin.download_document', doc_id=doc.id) }}">{{ doc.original_filename }}</a>
                     (上传于 {{ doc.upload_timestamp.strftime('%Y-%m-%d %H:%M') }})
                 </div>
                 {% endfor %}
@@ -80,16 +80,16 @@
 
         {% if current_user_can_approve %}
         <div class="action-buttons">
-            <form action="{{ url_for('admin_approve_application', app_id=application.application_id) }}" method="post" style="display: inline;">
+            <form action="{{ url_for('admin.admin_approve_application', app_id=application.application_id) }}" method="post" style="display: inline;">
                 <button type="submit" class="approve-btn">批准</button>
             </form>
-            <form action="{{ url_for('admin_reject_application', app_id=application.application_id) }}" method="post" style="display: inline; margin-left: 10px;">
+            <form action="{{ url_for('admin.admin_reject_application', app_id=application.application_id) }}" method="post" style="display: inline; margin-left: 10px;">
                 <button type="submit" class="reject-btn">拒绝</button>
             </form>
         </div>
         {% endif %}
 
-        <p><a href="{{ url_for('admin_applications') }}">返回申请列表</a></p>
+        <p><a href="{{ url_for('admin.admin_applications') }}">返回申请列表</a></p>
     </div>
 </body>
 </html>

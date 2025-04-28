@@ -11,7 +11,7 @@
         {% for org in organizations %}
             <div style="margin: 10px 0;">
                 {{ org.name }}
-                <form action="{{ url_for('organization_list_thesis', service_type=request.view_args.service_type) }}" method="post" style="display: inline;">
+                <form action="{{ url_for('user.organization_list_thesis', service_type=request.view_args.service_type) }}" method="post" style="display: inline;">
                     <input type="hidden" name="organization_id" value="{{ org.organization_id }}">
                     <input type="hidden" name="user_id" value="{{ user_id }}">
                     <button type="submit" name="access">Access</button>
@@ -23,6 +23,6 @@
     {% endif %}
     
     <br>
-    <a href="{{ url_for('dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
 </body>
 </html>

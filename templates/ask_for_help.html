@@ -25,7 +25,7 @@
 <body>
     <h2>Submit Your Question</h2>
     <div id="messageBox" class="message"></div>
-    <form id="questionForm" method="post" action="{{ url_for('submit_question') }}">
+    <form id="questionForm" method="post" action="{{ url_for('user.submit_question') }}">
         <label for="description">Question Description:</label><br>
         <textarea id="description" name="description" rows="4" cols="50" required></textarea><br><br>
         <button type="submit">Submit</button>
@@ -63,6 +63,6 @@
     </script>
     
     <br>
-    <a href="{{ url_for('dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
 </body>
 </html>

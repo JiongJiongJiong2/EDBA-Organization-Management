@@ -66,7 +66,7 @@
                 </ul>
             {% endif %}
         {% endwith %}
-        <form action="{{ url_for('register_oconvener') }}" method="post" enctype="multipart/form-data">
+        <form action="{{ url_for('auth.register_oconvener') }}" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="email">邮箱:</label>
                 <input type="email" id="email" name="email" required>
@@ -93,7 +93,7 @@
 
             <button type="submit">提交申请</button>
         </form>
-        <p><a href="{{ url_for('login') }}">返回登录</a></p>
+        <p><a href="{{ url_for('auth.login') }}">返回登录</a></p>
     </div>
 
     <script>
@@ -116,7 +116,7 @@
             const email = document.getElementById('email').value;
             if (email) {
                 // Send AJAX request to a new endpoint to send verification code
-                fetch('{{ url_for("send_verification_code") }}', { // Need to create this endpoint
+                fetch('{{ url_for("auth.send_verification_code") }}', { // Need to create this endpoint
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
