@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data user Dashboard</title>
+</head>
+<body>
+    <h2>Welcome, {{ user.email }}!</h2><br><br>
+    <p>You are {{ user.user_type }}, and your fund is {{ user.fund }}</p><br><br>
+    
+    <!-- Button actions for the user -->
+    <form action="{{ url_for('ask_for_help') }}" method="get" style="display: inline;">
+        <button type="submit">Help</button>
+    </form><br><br>
+
+    <form action="{{ url_for('course_info_check') }}" method="get" style="display: inline;">
+        <button type="submit" name="course_info">Course Information</button>
+    </form><br><br>
+
+    <form action="{{ url_for('organization_list_thesis', service_type='S') }}" method="get" style="display: inline;">
+        <button type="submit" name="search_thesis">Search Thesis</button>
+    </form><br><br>
+
+    {% if user.user_type != 'PC' %}
+        <form action="{{ url_for('organization_list_student', service_type='A') }}" method="get" style="display: inline;">
+            <button type="submit" name="student_identification">Student Identification</button>
+        </form><br><br>
+        <form action="{{ url_for('organization_list_student', service_type='R') }}" method="get" style="display: inline;">
+            <button type="submit" name="student_gpa">Student GPA</button>
+        </form><br><br>
+    {% endif %}
+
+    {% if user.user_type == 'PP' %}
+        <form action="{{ url_for('configuration_interface', organization_id=user.organization_id) }}" method="get" style="display: inline;">
+            <button type="configuration_interface">Configuration Interface</button>
+        </form><br><br>
+
+        <form action="{{ url_for('provide_course_info') }}" method="get" style="display: inline;">
+            <button type="submit" name="provide_course_info">Provide Course Information</button>
+        </form><br><br>
+    {% endif %}
+
+    {% if user.user_type in ['EE', 'SE'] %}
+        <form action="{{ url_for('admin_applications') }}" method="get" style="display: inline;">
+            <button type="submit">Manage Applications</button>
+        </form><br><br>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理注册申请</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> {# 假设存在一个 style.css 文件 #}
+    <style>
+        /* 简单的样式，后续可以完善 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .status-0 { color: orange; } /* 待审核 */
+        .status-1 { color: blue; }   /* E-Admin 已批准 */
+        .status-2 { color: red; }    /* 已拒绝 */
+        .status-3 { color: green; }  /* 最终批准 */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>注册申请列表</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>申请ID</th>
+                    <th>机构名称</th>
+                    <th>申请邮箱</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                <tr>
+                    <td>{{ application.application_id }}</td>
+                    <td>{{ application.organization_name }}</td>
+                    <td>{{ application.email }}</td>
+                    <td class="status-{{ application.status }}">
+                        {% if application.status == 0 %}待 E-Admin 审核
+                        {% elif application.status == 1 %}待 Senior E-Admin 审核
+                        {% elif application.status == 2 %}已拒绝
+                        {% elif application.status == 3 %}最终批准
+                        {% else %}未知状态
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin_view_application', app_id=application.application_id) }}">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p><a href="{{ url_for('dashboard', user_type=session.get('user_type')) }}">返回仪表盘</a></p>
+    </div>
+</body>
+</html>
