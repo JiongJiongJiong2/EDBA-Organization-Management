@@ -1,6 +1,6 @@
 # app.py
 
-from flask import Flask
+from flask import Flask, redirect, url_for
 from models import db
 from flask_mail import Mail
 
@@ -32,8 +32,13 @@ def create_app():
     app.register_blueprint(oconvener_bp, url_prefix='/oconvener')
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
+    @app.route('/')
+    def index():
+        return redirect(url_for('auth.login'))
+
     return app
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True)
