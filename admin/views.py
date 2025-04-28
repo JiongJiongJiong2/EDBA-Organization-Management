@@ -78,41 +78,43 @@ def download_document(doc_id):
 def admin_approve_application(app_id):
     if 'user_id' not in session or session.get('user_type') not in ['EE', 'SE']:
         flash('Unauthorized access', 'error')
-        return redirect(url_for('auth.login'))
+        return redirect(url_for('login'))
 
     application = db.session.get(Application, app_id)
     if not application:
         flash('Application not found', 'error')
-        return redirect(url_for('admin.admin_applications'))
+        return redirect(url_for('admin_applications'))
 
     try:
+        # E-Admin can approve status 0 (pending), Senior E-Admin can approve status 1 (E-Admin approved)
         if (application.status == 0 and session.get('user_type') in ['EE', 'SE']) or \
-           (application.status == 1 and session.get('user_type') == 'SE':
+           (application.status == 1 and session.get('user_type') == 'SE'):
             
             if application.status == 0:
+                # First approval by E-Admin
                 application.status = 1
                 flash('Application approved by E-Admin, waiting for Senior E-Admin approval', 'success')
             elif application.status == 1:
+                # Final approval by Senior E-Admin
                 application.status = 3
-
-                # 创建新的组织
+                
+                # Create new organization
                 new_org = Organization(name=application.organization_name)
                 db.session.add(new_org)
-                db.session.flush()  # 获取organization_id
-
-                # 创建O-Convener账户
+                db.session.flush()  # Get the new organization_id
+                
+                # Create O-Convener user
                 new_member = Member(
                     email=application.email,
                     user_type='OC',
                     organization_id=new_org.organization_id,
-                    fund=0
+                    fund=0  # Initial fund for O-Convener
                 )
                 db.session.add(new_member)
-
+                
                 flash('Application fully approved and organization created', 'success')
 
             db.session.commit()
-
         else:
             flash('You cannot approve this application at its current status', 'warning')
 
@@ -120,7 +122,7 @@ def admin_approve_application(app_id):
         db.session.rollback()
         flash(f'Error approving application: {str(e)}', 'error')
 
-    return redirect(url_for('admin.admin_view_application', app_id=app_id))
+    return redirect(url_for('admin_view_application', app_id=app_id))
 
 # 拒绝申请
 @admin_bp.route('/reject/<int:app_id>', methods=['POST'])
