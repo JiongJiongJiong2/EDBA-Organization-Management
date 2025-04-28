@@ -21,17 +21,20 @@ def dashboard(user_type):
     if user_type not in valid_types:
         flash('Invalid user type', 'danger')
         return redirect(url_for('auth.login'))
-
-    if user_type in ['OC', 'EE', 'TT', 'SE']:
-        # 这里你原本有个空redirect，可以跳转回dashboard
-        return redirect(url_for('user.dashboard', user_type=user_type))
-
+    
     member = db.session.get(Member, user_id)
     if not member:
         flash('User information retrieval failed, please log in again', 'danger')
         return redirect(url_for('auth.login'))
 
-    return render_template('dashboard_data_user.html', user=member)
+    if user_type in ['OC', 'EE', 'TT', 'SE']:
+        # 临时的
+        return redirect(url_for('user.dashboard', user_type=user_type))
+    
+    if user_type in ['PP', 'PC', 'CC']:
+        return redirect(url_for('user.dashboard', user_type=user_type))
+
+    return redirect(url_for('auth.login'))
 
 # 提交问题（寻求帮助）
 @user_bp.route('/ask-for-help')
