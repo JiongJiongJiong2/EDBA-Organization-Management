@@ -18,20 +18,22 @@ def dashboard(user_type):
     valid_types = ['OC', 'PP', 'PC', 'CC', 'EE', 'TT', 'SE']
     user_id = session.get('user_id')
 
+    # First check if user_type is valid
     if user_type not in valid_types:
         flash('Invalid user type', 'danger')
         return redirect(url_for('auth.login'))
 
-    if user_type in ['OC', 'EE', 'TT', 'SE']:
-        # 这里你原本有个空redirect，可以跳转回dashboard
-        return redirect(url_for('user.dashboard', user_type=user_type))
-
+    # Then get the member information
     member = db.session.get(Member, user_id)
     if not member:
         flash('User information retrieval failed, please log in again', 'danger')
         return redirect(url_for('auth.login'))
 
-    return render_template('dashboard_data_user.html', user=member)
+    # Split into two conditions
+    if user_type in ['OC', 'EE', 'TT', 'SE']:
+        return render_template('dashboard_data_user.html', user=member, user_type=user_type)
+    else:
+        return render_template('dashboard_data_user.html', user=member)
 
 # 提交问题（寻求帮助）
 @user_bp.route('/ask-for-help')
@@ -276,7 +278,7 @@ def submit_thesis_inquiry(service_id):
                 return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
     except Exception as e:
-        flash(f'Error occured: {str(e)}', 'error')
+        flash(f'Error occurred: {str(e)}', 'error')
         return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
 # 搜索课程信息
