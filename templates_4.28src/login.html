@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>EDBA System Login</title>
+</head>
+<body>
+    <h2>Login</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+        {% for category, msg in messages %}
+          <li class="{{ category }}">{{ msg }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('auth.login') }}">
+        <label for="email">email:</label>
+        <input type="email" id="email" name="email" value="{{ request.form.email or session.get('email_pending', '') }}" required>
+        <button type="submit" name="get_code">get verification code</button><br><br>
+
+        <label for="code">verification code:</label>
+        <input type="text" id="code" name="code">
+        <button type="submit" name="login">Login</button>
+    </form>
+    <p><a href="{{ url_for('auth.register_oconvener') }}">Register (organization only)</a></p> {# Add link to registration page #}
+</body>
+</html>

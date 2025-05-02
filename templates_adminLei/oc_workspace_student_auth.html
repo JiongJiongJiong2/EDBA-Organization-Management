@@ -1,0 +1,36 @@
+<h2>Student Identity Authentication</h2>
+<form id="student-form" enctype="multipart/form-data">
+    <label>Name:</label><br>
+    <input type="text" name="name"><br><br>
+
+    <label>Student ID:</label><br>
+    <input type="text" name="id"><br><br>
+
+    <label>Upload Photo:</label><br>
+    <input type="file" name="photo" accept="image/*"><br><br>
+
+    <button type="submit">Submit</button>
+</form>
+
+<p id="student-result" style="font-weight: bold; margin-top: 20px;"></p>
+
+<script>
+document.getElementById('student-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+
+    fetch('/oc_workspace/student/authenticate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(response => {
+        document.getElementById('student-result').innerText =
+            response.status === "success" ? "✅ Identity Verified" : "❌ Verification Failed";
+    })
+    .catch(err => {
+        document.getElementById('student-result').innerText = "Error: " + err;
+    });
+});
+</script>

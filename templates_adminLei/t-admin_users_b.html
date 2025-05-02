@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E-Admin Management</title>
+    <style>
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 8px;
+        }
+        .search-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .table-container {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            background-color: #f2f2f2;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        .action-button {
+            padding: 6px 12px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .authorize-button {
+            background-color: #4CAF50;
+        }
+        .revoke-button {
+            background-color: #f44336;
+        }
+        .flex-container {
+            display: flex;
+            gap: 20px;
+        }
+        .flex-item {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div style="width: 100%; height: 100%; padding: 20px;">
+        <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">E-Admin Management</h2>
+        <div class="search-form">
+            <form method="GET">
+                <input type="text" name="search" placeholder="Search E-Admin..." value="{{ search_query }}" class="search-input">
+                <button type="submit" class="search-button">Search</button>
+            </form>
+        </div>
+        
+        <div class="flex-container">
+            <div class="flex-item">
+                <h4 style="margin-bottom: 15px;">Current E-Admin List</h4>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Email</th>
+                                <th>User Type</th>
+                                <th>Organization ID</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user['user_id'] }}</td>
+                                <td>{{ user['email'] }}</td>
+                                <td>{{ user['user_type'] }}</td>
+                                <td>{{ user['organization_id'] }}</td>
+                                <td>
+                                    <form method="POST" action="/t_admin/revoke_eadmin/{{ user['user_id'] }}" style="display: inline;">
+                                        <button type="submit" class="action-button revoke-button">Revoke Authorization</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="flex-item">
+                <h4 style="margin-bottom: 15px;">Authorizable User List</h4>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Email</th>
+                                <th>User Type</th>
+                                <th>Organization ID</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in non_eadmin_users %}
+                            <tr>
+                                <td>{{ user['user_id'] }}</td>
+                                <td>{{ user['email'] }}</td>
+                                <td>{{ user['user_type'] }}</td>
+                                <td>{{ user['organization_id'] }}</td>
+                                <td>
+                                    <form method="POST" action="/t_admin/grant_eadmin/{{ user['user_id'] }}" style="display: inline;">
+                                        <button type="submit" class="action-button authorize-button">Authorize</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

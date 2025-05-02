@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Main Page</title>
+    <style>
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-10px);
+        }
+        .o-convener {
+            border: 3px solid #FF6B6B;
+        }
+        .e-admin {
+            border: 3px solid #4ECDC4;
+        }
+        .se-admin {
+            border: 3px solid #45B7D1;
+        }
+        .t-admin {
+            border: 3px solid #96CEB4;
+        }
+        .answered-questions {
+            border: 3px solid #FFEEAD;
+        }
+        .unanswered-questions {
+            border: 3px solid #D4A5A5;
+        }
+        .card h3 {
+            margin-bottom: 10px;
+        }
+        .card p {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div style="width: 100%; height: 100%; padding: 20px;">
+        <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Main Page</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div class="card o-convener" onclick="loadContent('/t_admin/users/a')">
+                <h3 style="color: #FF6B6B;">O-Convener</h3>
+                <p>Manage O-Convener users</p>
+            </div>
+            
+            <div class="card e-admin" onclick="loadContent('/t_admin/users/b')">
+                <h3 style="color: #4ECDC4;">E-Admin</h3>
+                <p>Manage E-Admin users</p>
+            </div>
+            
+            <div class="card se-admin" onclick="loadContent('/t_admin/users/c')">
+                <h3 style="color: #45B7D1;">SE-Admin</h3>
+                <p>Manage SE-Admin users</p>
+            </div>
+            
+            <div class="card t-admin" onclick="loadContent('/t_admin/users/d')">
+                <h3 style="color: #96CEB4;">T-Admin</h3>
+                <p>Manage T-Admin users</p>
+            </div>
+            
+            <div class="card answered-questions" onclick="loadContent('/t_admin/questions/a')">
+                <h3 style="color: #FFEEAD;">Answered Questions</h3>
+                <p>View answered questions list</p>
+            </div>
+            
+            <div class="card unanswered-questions" onclick="loadContent('/t_admin/questions/b')">
+                <h3 style="color: #D4A5A5;">Unanswered Questions</h3>
+                <p>View unanswered questions list</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

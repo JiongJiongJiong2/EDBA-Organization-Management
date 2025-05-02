@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O-Convener 注册</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> {# 假设存在一个 style.css 文件 #}
+    <style>
+        /* 简单的样式，后续可以完善 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="file"] {
+            width: calc(100% - 22px); /* Adjust for padding and border */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .file-list {
+            margin-top: 10px;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .file-item {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>O-Convener 注册</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('auth.register_oconvener') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="email">邮箱:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="organization_name">机构名称:</label>
+                <input type="text" id="organization_name" name="organization_name" required>
+            </div>
+            <div class="form-group">
+                <label for="proof_document">证明材料:</label>
+                <input type="file" id="proof_document" name="proof_document" multiple> {# 允许上传多个文件 #}
+                <div class="file-list">
+                    <p>已选择文件:</p>
+                    {# 这里可以使用 JavaScript 显示已选择的文件 #}
+                    <ul id="selected-files"></ul>
+                </div>
+            </div>
+            {# 验证码部分，可以复用登录页面的逻辑，这里先占位 #}
+            <div class="form-group">
+                <label for="code">验证码:</label>
+                <input type="text" id="code" name="code" required>
+                <button type="button" id="send-code-btn">发送验证码</button> {# 需要 JavaScript 实现发送验证码功能 #}
+            </div>
+
+            <button type="submit">提交申请</button>
+        </form>
+        <p><a href="{{ url_for('auth.login') }}">返回登录</a></p>
+    </div>
+
+    <script>
+        // JavaScript for displaying selected files and sending verification code
+        const fileInput = document.getElementById('proof_document');
+        const selectedFilesList = document.getElementById('selected-files');
+
+        fileInput.addEventListener('change', function() {
+            selectedFilesList.innerHTML = ''; // Clear previous list
+            for (const file of fileInput.files) {
+                const listItem = document.createElement('li');
+                listItem.textContent = file.name;
+                selectedFilesList.appendChild(listItem);
+            }
+        });
+
+        // TODO: Implement send verification code functionality using AJAX
+        const sendCodeBtn = document.getElementById('send-code-btn');
+        sendCodeBtn.addEventListener('click', function() {
+            const email = document.getElementById('email').value;
+            if (email) {
+                // Send AJAX request to a new endpoint to send verification code
+                fetch('{{ url_for("auth.send_verification_code") }}', { // Need to create this endpoint
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('验证码已发送，请查收邮件。');
+                    } else {
+                        alert('发送验证码失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('发送验证码时发生错误。');
+                });
+            } else {
+                alert('请输入邮箱地址。');
+            }
+        });
+    </script>
+</body>
+</html>

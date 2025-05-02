@@ -1,0 +1,42 @@
+<div style="width: 100%; height: 100%; padding: 20px;">
+  <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">Answered Questions List</h2>
+  <div style="margin-bottom: 20px;">
+    <form method="GET" style="display: flex; gap: 10px;">
+      <input type="text" name="search" placeholder="Search questions..." value="{{ search_query }}" style="flex: 1; padding: 8px;">
+      <button type="submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Search</button>
+    </form>
+  </div>
+  <div style="height: calc(100% - 60px); overflow-y: auto; border: 1px solid #ccc; border-radius: 4px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead style="position: sticky; top: 0; background-color: #f2f2f2;">
+        <tr>
+          <th style="padding: 12px;">Question ID</th>
+          <th style="padding: 12px;">Description</th>
+          <th style="padding: 12px;">Sender ID</th>
+          <th style="padding: 12px;">Sender Email</th>
+          <th style="padding: 12px;">Answer</th>
+          <th style="padding: 12px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questions %}
+        <tr>
+          <td style="padding: 12px;">{{ q.question_id }}</td>
+          <td style="padding: 12px;">{{ q.description }}</td>
+          <td style="padding: 12px;">{{ q.sender_id }}</td>
+          <td style="padding: 12px;">{{ q.sender }}</td>
+          <td style="padding: 12px;">
+            <form method="POST" action="{{ url_for('update_answer', question_id=q.question_id) }}" style="display: flex; gap: 10px;">
+              <input type="text" name="answer" value="{{ q.answer }}" style="flex: 1; padding: 8px;">
+              <button type="submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Confirm</button>
+            </form>
+          </td>
+          <td style="padding: 12px;">
+            <button onclick="document.forms[0].submit()" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Save</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
