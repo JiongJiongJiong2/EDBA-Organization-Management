@@ -1,12 +1,19 @@
 # admin/views.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+import sqlite3
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
 from models import db, Application, ApplicationDocument, Organization, Member
 
 from flask import send_from_directory
+
+# Database connection function for legacy code
+def get_db_connection():
+    conn = sqlite3.connect('yourdatabase.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -149,3 +156,570 @@ def admin_reject_application(app_id):
         flash(f'Error rejecting application: {str(e)}', 'error')
 
     return redirect(url_for('admin.admin_view_application', app_id=app_id))
+
+# T-Admin Routes
+@admin_bp.route('/t_admin/users/a')
+def t_admin_users_a():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members
+        """
+        users = conn.execute(query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_users_a.html', users=users, search_query=search_query)
+
+@admin_bp.route('/t_admin/users/b')
+def t_admin_users_b():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'E-Admin' 
+        AND (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'E-Admin'
+        """
+        users = conn.execute(query).fetchall()
+    
+    non_eadmin_query = """
+    SELECT user_id, email, user_type, organization_id 
+    FROM members 
+    WHERE user_type != 'E-Admin'
+    """
+    non_eadmin_users = conn.execute(non_eadmin_query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_users_b.html', users=users, non_eadmin_users=non_eadmin_users, search_query=search_query)
+
+@admin_bp.route('/t_admin/users/c')
+def t_admin_users_c():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'SE-Admin' 
+        AND (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'SE-Admin'
+        """
+        users = conn.execute(query).fetchall()
+    
+    eadmin_query = """
+    SELECT user_id, email, user_type, organization_id 
+    FROM members 
+    WHERE user_type = 'E-Admin'
+    """
+    eadmin_users = conn.execute(eadmin_query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_users_c.html', users=users, eadmin_users=eadmin_users, search_query=search_query)
+
+@admin_bp.route('/t_admin/users/d')
+def t_admin_users_d():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'T-Admin' 
+        AND (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE user_type = 'T-Admin'
+        """
+        users = conn.execute(query).fetchall()
+    
+    non_eadmin_query = """
+    SELECT user_id, email, user_type, organization_id 
+    FROM members 
+    WHERE user_type != 'E-Admin'
+    """
+    non_eadmin_users = conn.execute(non_eadmin_query).fetchall()
+    
+    eadmin_query = """
+    SELECT user_id, email, user_type, organization_id 
+    FROM members 
+    WHERE user_type = 'E-Admin'
+    """
+    eadmin_users = conn.execute(eadmin_query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_users_d.html', users=users, non_eadmin_users=non_eadmin_users, eadmin_users=eadmin_users, search_query=search_query)
+
+@admin_bp.route('/t_admin/update_answer/<question_id>', methods=['POST'])
+def t_admin_update_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '').strip()
+    
+    if not new_answer:
+        conn.execute("UPDATE questions SET answer = ?, status = 0 WHERE question_id = ?", (new_answer, question_id))
+    else:
+        conn.execute("UPDATE questions SET answer = ? WHERE question_id = ?", (new_answer, question_id))
+    
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_question_a'))
+
+@admin_bp.route('/t_admin/questions/a')
+def t_admin_question_a():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email as sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1 
+        AND (q.description LIKE ? OR m.email LIKE ? OR q.answer LIKE ?)
+        """
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email as sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1
+        """
+        questions = conn.execute(query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_question_a.html', questions=questions, search_query=search_query)
+
+@admin_bp.route('/t_admin/submit_answer/<question_id>', methods=['POST'])
+def t_admin_submit_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '')
+    conn.execute("UPDATE questions SET answer = ?, status = 1 WHERE question_id = ?", (new_answer, question_id))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_question_b'))
+
+@admin_bp.route('/t_admin/questions/b')
+def t_admin_question_b():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email as sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0 
+        AND (q.description LIKE ? OR m.email LIKE ?)
+        """
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email as sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0
+        """
+        questions = conn.execute(query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_question_b.html', questions=questions, search_query=search_query)
+
+@admin_bp.route('/t_admin/main')
+def t_admin_main_page():
+    return render_template('t-admin_main_page.html')
+
+@admin_bp.route('/t_admin')
+def t_admin_index():
+    return redirect(url_for('admin.t_admin_user_management'))
+
+@admin_bp.route('/t_admin/users')
+def t_admin_user_management():
+    search_query = request.args.get('search', '')
+    conn = get_db_connection()
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members 
+        WHERE (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id 
+        FROM members
+        """
+        users = conn.execute(query).fetchall()
+    
+    conn.close()
+    return render_template('t-admin_user_management.html', users=users, search_query=search_query)
+
+@admin_bp.route('/t_admin/grant_eadmin/<user_id>', methods=['POST'])
+def t_admin_grant_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'E-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_user_management'))
+
+@admin_bp.route('/t_admin/revoke_eadmin/<user_id>', methods=['POST'])
+def t_admin_revoke_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'User' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_user_management'))
+
+@admin_bp.route('/t_admin/grant_seadmin/<user_id>', methods=['POST'])
+def t_admin_grant_seadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'SE-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_user_management'))
+
+@admin_bp.route('/t_admin/revoke_seadmin/<user_id>', methods=['POST'])
+def t_admin_revoke_seadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'E-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.t_admin_user_management'))
+
+# E-Admin Routes
+@admin_bp.route('/e_admin/users/b')
+def e_admin_users_b():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = '''
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        WHERE user_type = 'E-Admin'
+          AND (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        '''
+        users_list = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = '''
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        WHERE user_type = 'E-Admin'
+        '''
+        users_list = conn.execute(query).fetchall()
+
+    non_eadmin_query = '''
+    SELECT user_id, email, user_type, organization_id
+    FROM members
+    WHERE user_type != 'E-Admin'
+    '''
+    non_eadmin_users = conn.execute(non_eadmin_query).fetchall()
+    conn.close()
+
+    return render_template('e_admin_user_b.html', users=users_list, non_eadmin_users=non_eadmin_users, search_query=search_query)
+
+@admin_bp.route('/e_admin/questions/a', methods=['GET'])
+def e_admin_question_a():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = '''
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1
+          AND (q.question_id LIKE ? OR q.description LIKE ? OR m.email LIKE ?)
+        '''
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = '''
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1
+        '''
+        questions = conn.execute(query).fetchall()
+
+    conn.close()
+    return render_template('e_admin_question_a.html', questions=questions, search_query=search_query)
+
+@admin_bp.route('/e_admin/questions/b', methods=['GET'])
+def e_admin_question_b():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = '''
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0
+          AND (q.question_id LIKE ? OR q.description LIKE ? OR m.email LIKE ?)
+        '''
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = '''
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0
+        '''
+        questions = conn.execute(query).fetchall()
+
+    conn.close()
+    return render_template('e_admin_question_b.html', questions=questions, search_query=search_query)
+
+@admin_bp.route('/e_admin/update_answer/<question_id>', methods=['POST'])
+def e_admin_update_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '')
+
+    if not new_answer:
+        conn.execute("UPDATE questions SET answer = ?, status = 0 WHERE question_id = ?", (new_answer, question_id))
+    else:
+        conn.execute("UPDATE questions SET answer = ? WHERE question_id = ?", (new_answer, question_id))
+
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.e_admin_question_a'))
+
+@admin_bp.route('/e_admin/submit_answer/<question_id>', methods=['POST'])
+def e_admin_submit_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '')
+    conn.execute("UPDATE questions SET answer = ?, status = 1 WHERE question_id = ?", (new_answer, question_id))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.e_admin_question_b'))
+
+@admin_bp.route('/e_admin/main')
+def e_admin_main_page():
+    return render_template('e_admin_main.html')
+
+@admin_bp.route('/e_admin')
+def e_admin_index():
+    return render_template('e_admin_user_management.html')
+
+@admin_bp.route('/e_admin/grant_eadmin/<user_id>', methods=['POST'])
+def e_admin_grant_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'E-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.e_admin_user_management'))
+
+@admin_bp.route('/e_admin/revoke_eadmin/<user_id>', methods=['POST'])
+def e_admin_revoke_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'User' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.e_admin_user_management'))
+
+# SE-Admin Routes
+@admin_bp.route('/se_admin/users')
+def se_admin_user_management():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+    
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        WHERE (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        users = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        """
+        users = conn.execute(query).fetchall()
+    
+    conn.close()
+    return render_template('se_admin_user_management.html', users=users, search_query=search_query)
+
+@admin_bp.route('/se_admin')
+def se_admin_main_page1():
+    return render_template('se_admin_user_management.html')
+
+@admin_bp.route('/se_admin/main')
+def se_admin_main_page2():
+    return render_template('se_admin_main_page.html')
+
+@admin_bp.route('/se_admin/users/c')
+def se_admin_users_c():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = """
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        WHERE user_type = 'SE-Admin'
+          AND (user_id LIKE ? OR email LIKE ? OR organization_id LIKE ?)
+        """
+        se_admins = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT user_id, email, user_type, organization_id
+        FROM members
+        WHERE user_type = 'SE-Admin'
+        """
+        se_admins = conn.execute(query).fetchall()
+
+    eadmin_query = """
+    SELECT user_id, email, user_type, organization_id
+    FROM members
+    WHERE user_type = 'E-Admin'
+    """
+    e_admins = conn.execute(eadmin_query).fetchall()
+    conn.close()
+
+    return render_template('se_admin_management.html',
+                         se_admins=se_admins,
+                         e_admins=e_admins,
+                         search_query=search_query)
+
+@admin_bp.route('/se_admin/questions/a')
+def se_admin_question_a():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1
+          AND (q.description LIKE ? OR m.email LIKE ? OR q.answer LIKE ?)
+        """
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 1
+        """
+        questions = conn.execute(query).fetchall()
+
+    conn.close()
+    return render_template('se_admin_answered_questions.html',
+                         questions=questions,
+                         search_query=search_query)
+
+@admin_bp.route('/se_admin/questions/b')
+def se_admin_question_b():
+    conn = get_db_connection()
+    search_query = request.args.get('search', '')
+
+    if search_query:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0
+          AND (q.description LIKE ? OR m.email LIKE ?)
+        """
+        questions = conn.execute(query, (f'%{search_query}%', f'%{search_query}%')).fetchall()
+    else:
+        query = """
+        SELECT q.question_id, q.description, q.sender_id, m.email AS sender, q.answer
+        FROM questions q
+        JOIN members m ON q.sender_id = m.user_id
+        WHERE q.status = 0
+        """
+        questions = conn.execute(query).fetchall()
+
+    conn.close()
+    return render_template('se_admin_unanswered_questions.html',
+                         questions=questions,
+                         search_query=search_query)
+
+@admin_bp.route('/se_admin/update_answer/<question_id>', methods=['POST'])
+def se_admin_update_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '').strip()
+
+    if not new_answer:
+        conn.execute("UPDATE questions SET answer = ?, status = 0 WHERE question_id = ?", (new_answer, question_id))
+    else:
+        conn.execute("UPDATE questions SET answer = ? WHERE question_id = ?", (new_answer, question_id))
+
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_question_a'))
+
+@admin_bp.route('/se_admin/submit_answer/<question_id>', methods=['POST'])
+def se_admin_submit_answer(question_id):
+    conn = get_db_connection()
+    new_answer = request.form.get('answer', '')
+    conn.execute("UPDATE questions SET answer = ?, status = 1 WHERE question_id = ?", (new_answer, question_id))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_question_b'))
+
+@admin_bp.route('/se_admin/grant_eadmin/<user_id>', methods=['POST'])
+def se_admin_grant_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'E-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_user_management'))
+
+@admin_bp.route('/se_admin/revoke_eadmin/<user_id>', methods=['POST'])
+def se_admin_revoke_eadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'User' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_user_management'))
+
+@admin_bp.route('/se_admin/grant_seadmin/<user_id>', methods=['POST'])
+def se_admin_grant_seadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'SE-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_user_management'))
+
+@admin_bp.route('/se_admin/revoke_seadmin/<user_id>', methods=['POST'])
+def se_admin_revoke_seadmin(user_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE members SET user_type = 'E-Admin' WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('admin.se_admin_user_management'))
