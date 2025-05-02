@@ -1,21 +1,41 @@
-<h2>Bank Account Authentication</h2>
-<form id="bank-form">
-    <label>Bank:</label><br>
-    <input type="text" name="bank"><br><br>
+<div class="auth-container" style="max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e5799; margin-bottom: 20px;">Bank Account Authentication</h2>
+    <form id="bank-form">
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Bank:</label>
+            <input type="text" name="bank" required 
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <label>Account Name:</label><br>
-    <input type="text" name="account_name"><br><br>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Account Name:</label>
+            <input type="text" name="account_name" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <label>Account Number:</label><br>
-    <input type="text" name="account_number"><br><br>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Account Number:</label>
+            <input type="text" name="account_number" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <label>Password:</label><br>
-    <input type="password" name="password"><br><br>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Password:</label>
+            <input type="password" name="password" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <button type="submit">Submit</button>
-</form>
+        <button type="submit" 
+            style="width: 100%; padding: 10px; background: #1e5799; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+            Authenticate
+        </button>
+    </form>
 
-<p id="result" style="font-weight: bold;"></p>
+    <div id="result" style="margin-top: 20px; text-align: center; font-weight: bold;"></div>
+    <div id="loading" style="display: none; text-align: center; margin-top: 20px;">
+        Authenticating...
+    </div>
+</div>
 
 <script>
 document.getElementById('bank-form').addEventListener('submit', function(e) {
@@ -29,19 +49,54 @@ document.getElementById('bank-form').addEventListener('submit', function(e) {
         password: form.password.value
     };
 
-    fetch('/oc_workspace/bank/authenticate', {
+    // Show loading
+    const loading = document.getElementById('loading');
+    const submitButton = form.querySelector('button[type="submit"]');
+    loading.style.display = 'block';
+    submitButton.disabled = true;
+    submitButton.style.backgroundColor = '#ccc';
+    document.getElementById('result').innerText = '';
+
+    fetch("{{ url_for('oconvener.bank_authenticate') }}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Authentication request failed');
+        }
+        return res.json();
+    })
     .then(response => {
-        document.getElementById('result').innerText = response.status === "success"
-            ? "✅ Authentication Passed"
-            : "❌ Authentication Failed";
+        const resultDiv = document.getElementById('result');
+        if (response.status === "success") {
+            resultDiv.innerHTML = `
+                <div style="color: #4CAF50; padding: 10px; background: #E8F5E9; border-radius: 4px;">
+                    ✅ Authentication Successful
+                </div>
+            `;
+            form.reset();
+        } else {
+            resultDiv.innerHTML = `
+                <div style="color: #f44336; padding: 10px; background: #FFEBEE; border-radius: 4px;">
+                    ❌ Authentication Failed: ${response.reason || 'Unknown error'}
+                </div>
+            `;
+        }
     })
     .catch(err => {
-        document.getElementById('result').innerText = "Error: " + err;
+        document.getElementById('result').innerHTML = `
+            <div style="color: #f44336; padding: 10px; background: #FFEBEE; border-radius: 4px;">
+                ❌ Error: ${err.message}
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Hide loading and restore button
+        loading.style.display = 'none';
+        submitButton.disabled = false;
+        submitButton.style.backgroundColor = '#1e5799';
     });
 });
 </script>

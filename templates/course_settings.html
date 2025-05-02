@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Settings</title>
+    <style>
+        .settings-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .settings-header {
+            color: #1e5799;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            user-select: none;
+            cursor: pointer;
+        }
+        .checkbox-input {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .info-text {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .submit-button {
+            width: 100%;
+            padding: 10px;
+            background: #1e5799;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .submit-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .flash-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .flash-success {
+            background-color: #E8F5E9;
+            color: #4CAF50;
+        }
+        .flash-error {
+            background-color: #FFEBEE;
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <h2 class="settings-header">Course Information Sharing Settings</h2>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="enabled" class="checkbox-input"
+                        {% if checked %}checked{% endif %}>
+                    <span>Enable Course Information Sharing Service</span>
+                </label>
+            </div>
+
+            <div class="info-box">
+                <p class="info-text">
+                    <strong>Note:</strong> When enabled, this service allows other organizations to view and search your course information.
+                </p>
+            </div>
+
+            <button type="submit" class="submit-button">Save Settings</button>
+        </form>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.textContent = 'Saving...';
+            submitButton.disabled = true;
+        });
+    </script>
+</body>
+</html>

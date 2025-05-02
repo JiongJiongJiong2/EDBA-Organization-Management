@@ -10,7 +10,7 @@ from flask import send_from_directory
 
 # Database connection function for legacy code
 def get_db_connection():
-    conn = sqlite3.connect('yourdatabase.db')
+    conn = sqlite3.connect('EDBA.db')
     conn.row_factory = sqlite3.Row
     return conn
 

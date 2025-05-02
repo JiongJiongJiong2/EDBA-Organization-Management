@@ -1,36 +1,113 @@
-<h2>Student Identity Authentication</h2>
-<form id="student-form" enctype="multipart/form-data">
-    <label>Name:</label><br>
-    <input type="text" name="name"><br><br>
+<div class="auth-container" style="max-width: 500px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e5799; margin-bottom: 20px;">Student Identity Authentication</h2>
+    <form id="student-form" enctype="multipart/form-data">
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Name:</label>
+            <input type="text" name="name" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <label>Student ID:</label><br>
-    <input type="text" name="id"><br><br>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Student ID:</label>
+            <input type="text" name="id" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+        </div>
 
-    <label>Upload Photo:</label><br>
-    <input type="file" name="photo" accept="image/*"><br><br>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; color: #666;">Upload Photo:</label>
+            <input type="file" name="photo" accept="image/*" required
+                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+            <div style="margin-top: 5px; font-size: 12px; color: #666;">
+                Supported formats: JPG, PNG, GIF
+            </div>
+        </div>
 
-    <button type="submit">Submit</button>
-</form>
+        <button type="submit" 
+            style="width: 100%; padding: 10px; background: #1e5799; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+            Verify Identity
+        </button>
+    </form>
 
-<p id="student-result" style="font-weight: bold; margin-top: 20px;"></p>
+    <div id="student-result" style="margin-top: 20px; text-align: center; font-weight: bold;"></div>
+    <div id="loading" style="display: none; text-align: center; margin-top: 20px;">
+        Verifying identity...
+    </div>
+
+    <div id="preview" style="margin-top: 20px; text-align: center;">
+        <img id="photo-preview" style="max-width: 200px; display: none; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    </div>
+</div>
 
 <script>
+// Preview uploaded photo
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('photo-preview');
+            preview.src = e.target.result;
+            preview.style.display = 'inline-block';
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
 document.getElementById('student-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const formData = new FormData(e.target);
+    const form = e.target;
+    const formData = new FormData(form);
 
-    fetch('/oc_workspace/student/authenticate', {
+    // Show loading
+    const loading = document.getElementById('loading');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const resultDiv = document.getElementById('student-result');
+    
+    loading.style.display = 'block';
+    submitButton.disabled = true;
+    submitButton.style.backgroundColor = '#ccc';
+    resultDiv.innerHTML = '';
+
+    fetch("{{ url_for('oconvener.student_authenticate') }}", {
         method: 'POST',
         body: formData
     })
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Verification request failed');
+        }
+        return res.json();
+    })
     .then(response => {
-        document.getElementById('student-result').innerText =
-            response.status === "success" ? "✅ Identity Verified" : "❌ Verification Failed";
+        if (response.status === "success") {
+            resultDiv.innerHTML = `
+                <div style="color: #4CAF50; padding: 10px; background: #E8F5E9; border-radius: 4px;">
+                    ✅ Identity Successfully Verified
+                </div>
+            `;
+            form.reset();
+            document.getElementById('photo-preview').style.display = 'none';
+        } else {
+            resultDiv.innerHTML = `
+                <div style="color: #f44336; padding: 10px; background: #FFEBEE; border-radius: 4px;">
+                    ❌ Verification Failed: ${response.reason || 'Unknown error'}
+                </div>
+            `;
+        }
     })
     .catch(err => {
-        document.getElementById('student-result').innerText = "Error: " + err;
+        resultDiv.innerHTML = `
+            <div style="color: #f44336; padding: 10px; background: #FFEBEE; border-radius: 4px;">
+                ❌ Error: ${err.message}
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Hide loading and restore button
+        loading.style.display = 'none';
+        submitButton.disabled = false;
+        submitButton.style.backgroundColor = '#1e5799';
     });
 });
 </script>

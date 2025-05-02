@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O-Convener_Workshop</title>
+    <title>O-Convener Workshop</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
@@ -58,26 +58,26 @@
 </head>
 <body>
     <div class="header">
-        <h1>O-Convener_Workshop</h1>
-        <a href="http://localhost:5000" style="color: white; text-decoration: none; padding: 8px 16px; background-color: #4CAF50; border-radius: 4px;">Back to Main Page</a>
+        <h1>O-Convener Workshop</h1>
+        <a href="{{ url_for('user.dashboard', user_type='OC') }}" style="color: white; text-decoration: none; padding: 8px 16px; background-color: #4CAF50; border-radius: 4px;">Back to Main Page</a>
     </div>
     
     <div class="container">
         <div class="sidebar">
             <ul class="sidebar-menu">
-                <li onclick="loadContent('/oc_workspace/account/a')">Bank Account</li>
-                <li onclick="loadContent('/oc_workspace/list/a')">Member List</li>
-                <li onclick="loadContent('/oc_workspace/information/a')">Organization Information</li>
+                <li onclick="loadContent(URLS.bankAccount)">Bank Account</li>
+                <li onclick="loadContent(URLS.memberList)">Member List</li>
+                <li onclick="loadContent(URLS.organizationInfo)">Organization Information</li>
 
                 <li onclick="toggleSubMenu('service')" style="cursor: pointer;">
                     <span style="font-size: 12px; margin-left: 5px;">▼</span> Service
                 </li>
                 <ul id="service-submenu" style="list-style: none; padding-left: 20px; display: none;">
-                    <li onclick="loadContent('/oc_workspace/service/a')">Course information sharing</li>
-                    <li onclick="loadContent('/oc_workspace/service/a/settings')">Course setting</li>
-                    <li onclick="loadContent('/oc_workspace/service/b')">Student identity authentication</li>
-                    <li onclick="loadContent('/oc_workspace/service/c')">Thesis list</li>
-                    <li onclick="loadContent('/oc_workspace/service/d')">Thesis sharing</li>
+                    <li onclick="loadContent(URLS.courseInfo)">Course information sharing</li>
+                    <li onclick="loadContent(URLS.courseSetting)">Course setting</li>
+                    <li onclick="loadContent(URLS.studentAuth)">Student identity authentication</li>
+                    <li onclick="loadContent(URLS.thesisList)">Thesis list</li>
+                    <li onclick="loadContent(URLS.thesisSharing)">Thesis sharing</li>
                 </ul>
             </ul>
         </div>
@@ -87,6 +87,18 @@
     </div>
 
     <script>
+        // Store all URLs in a global object
+        const URLS = {
+            bankAccount: "{{ url_for('oconvener.account_a') }}",
+            memberList: "{{ url_for('oconvener.list_a') }}",
+            organizationInfo: "{{ url_for('oconvener.information_a') }}",
+            courseInfo: "{{ url_for('oconvener.service_a') }}",
+            courseSetting: "{{ url_for('oconvener.course_service_settings') }}",
+            studentAuth: "{{ url_for('oconvener.service_b') }}",
+            thesisList: "{{ url_for('thesis_list') }}",
+            thesisSharing: "{{ url_for('oconvener.service_d') }}"
+        };
+
         // Toggle submenu display
         function toggleSubMenu(menuType) {
             const submenu = document.getElementById(menuType + '-submenu');
@@ -96,14 +108,34 @@
         // Dynamically load page content
         function loadContent(url) {
             fetch(url)
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
                 .then(data => {
                     document.getElementById('main-content').innerHTML = data;
                 })
                 .catch(error => {
                     console.error('Error loading content:', error);
+                    document.getElementById('main-content').innerHTML = `
+                        <div style="color: red; padding: 20px;">
+                            Error loading content. Please try again.
+                        </div>
+                    `;
                 });
         }
+
+        // Auto-hide submenu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('li')) {
+                const submenu = document.getElementById('service-submenu');
+                if (submenu) {
+                    submenu.style.display = 'none';
+                }
+            }
+        });
     </script>
 </body>
 </html>

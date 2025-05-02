@@ -115,15 +115,15 @@
                     </div>
                     <ul id="main-submenu" style="list-style: none; padding-left: 15px; display: none;">
                         <li>
-                            <div onclick="toggleSubMenu('user')" style="cursor: pointer;">Workspace</div>
+                            <div onclick="loadContent(URLS.workspace)" style="cursor: pointer;">Workspace</div>
                         </li>
                         <li>
                             <div onclick="toggleSubMenu('question')" style="cursor: pointer;">
                             <span style="font-size: 12px; margin-left: 5px;">▼</span> Seek-help
                             </div>
                             <ul id="question-submenu" style="list-style: none; padding-left: 15px; display: none;">
-                                <li onclick="loadContent('/o_convener/questions/a')">Question</li>
-                                <li onclick="loadContent('/o_convener/questions/b')">Feedback</li>
+                                <li onclick="loadContent(URLS.questionA)">Question</li>
+                                <li onclick="loadContent(URLS.questionB)">Feedback</li>
                             </ul>
                         </li>
                     </ul>
@@ -133,15 +133,15 @@
     
         <div class="content" id="main-content">
             <div class="main-grid">
-                <div class="main-box workspace-box" onclick="loadContent('/o_convener/workspace')">
+                <div class="main-box workspace-box" onclick="loadContent(URLS.workspace)">
                     <h3>Workspace</h3>
                     <p>Enter Workspace</p>
                 </div>
-                <div class="main-box question-box" onclick="loadContent('/o_convener/questions/a')">
+                <div class="main-box question-box" onclick="loadContent(URLS.questionA)">
                     <h3>Question</h3>
                     <p>Submit Question</p>
                 </div>
-                <div class="main-box feedback-box" onclick="loadContent('/o_convener/questions/b')">
+                <div class="main-box feedback-box" onclick="loadContent(URLS.questionB)">
                     <h3>Feedback</h3>
                     <p>View Feedback</p>
                 </div>
@@ -150,6 +150,13 @@
     </div>
 
 <script>
+    // Store all URLs in a global object to avoid template syntax issues
+    const URLS = {
+        workspace: "{{ url_for('oconvener.workspace') }}",
+        questionA: "{{ url_for('oconvener.question_a') }}",
+        questionB: "{{ url_for('oconvener.question_b') }}"
+    };
+
     function toggleMainMenu() {
         const mainSubmenu = document.getElementById('main-submenu');
         mainSubmenu.style.display = mainSubmenu.style.display === 'none' ? 'block' : 'none';
@@ -160,15 +167,15 @@
     function showMainContent() {
         const mainContent = `
             <div class="main-grid">
-                <div class="main-box workspace-box" onclick="loadContent('/o_convener/workspace')">
+                <div class="main-box workspace-box" onclick="loadContent(URLS.workspace)">
                     <h3>Workspace</h3>
                     <p>Enter Workspace</p>
                 </div>
-                <div class="main-box question-box" onclick="loadContent('/o_convener/questions/a')">
+                <div class="main-box question-box" onclick="loadContent(URLS.questionA)">
                     <h3>Question</h3>
                     <p>Submit Question</p>
                 </div>
-                <div class="main-box feedback-box" onclick="loadContent('/o_convener/questions/b')">
+                <div class="main-box feedback-box" onclick="loadContent(URLS.questionB)">
                     <h3>Feedback</h3>
                     <p>View Feedback</p>
                 </div>
@@ -220,7 +227,7 @@
         submitButton.textContent = 'Submitting...';
         submitButton.disabled = true;
         
-        fetch('/o_convener/questions/a', {
+        fetch(URLS.questionA, {
             method: 'POST',
             body: formData
         })
@@ -232,76 +239,15 @@
         })
         .then(data => {
             if (data.success) {
-                // Show success message
-                const successMessage = document.createElement('div');
-                successMessage.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 15px 25px;
-                    border-radius: 4px;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    z-index: 1000;
-                    animation: fadeInOut 3s ease-in-out;
-                `;
-                successMessage.textContent = data.message || 'Question submitted successfully!';
-                document.body.appendChild(successMessage);
-                
-                // Remove message after 3 seconds
-                setTimeout(() => {
-                    successMessage.remove();
-                }, 3000);
-                
+                showMessage('success', data.message || 'Question submitted successfully!');
                 form.reset();
             } else {
-                // Show error message
-                const errorMessage = document.createElement('div');
-                errorMessage.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background-color: #f44336;
-                    color: white;
-                    padding: 15px 25px;
-                    border-radius: 4px;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    z-index: 1000;
-                    animation: fadeInOut 3s ease-in-out;
-                `;
-                errorMessage.textContent = data.message || 'Submission failed, please try again';
-                document.body.appendChild(errorMessage);
-                
-                // Remove message after 3 seconds
-                setTimeout(() => {
-                    errorMessage.remove();
-                }, 3000);
+                showMessage('error', data.message || 'Submission failed, please try again');
             }
         })
         .catch(error => {
             console.error('Error submitting question:', error);
-            // Show error message
-            const errorMessage = document.createElement('div');
-            errorMessage.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background-color: #f44336;
-                color: white;
-                padding: 15px 25px;
-                border-radius: 4px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                z-index: 1000;
-                animation: fadeInOut 3s ease-in-out;
-            `;
-            errorMessage.textContent = 'Submission failed, please try again';
-            document.body.appendChild(errorMessage);
-            
-            // Remove message after 3 seconds
-            setTimeout(() => {
-                errorMessage.remove();
-            }, 3000);
+            showMessage('error', 'Submission failed, please try again');
         })
         .finally(() => {
             // Restore button state
@@ -316,7 +262,7 @@
         const formData = new FormData(form);
         const searchParams = new URLSearchParams(formData);
         
-        fetch(`/o_convener/questions/b?${searchParams.toString()}`)
+        fetch(`${URLS.questionB}?${searchParams.toString()}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -335,8 +281,30 @@
             })
             .catch(error => {
                 console.error('Error searching questions:', error);
-                alert('Search failed, please try again');
+                showMessage('error', 'Search failed, please try again');
             });
+    }
+
+    function showMessage(type, text) {
+        const message = document.createElement('div');
+        message.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: ${type === 'success' ? '#4CAF50' : '#f44336'};
+            color: white;
+            padding: 15px 25px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: fadeInOut 3s ease-in-out;
+        `;
+        message.textContent = text;
+        document.body.appendChild(message);
+        
+        setTimeout(() => {
+            message.remove();
+        }, 3000);
     }
 
     // Add animation styles

@@ -29,11 +29,16 @@ def dashboard(user_type):
         flash('User information retrieval failed, please log in again', 'danger')
         return redirect(url_for('auth.login'))
 
-    # Split into two conditions
-    if user_type in ['OC', 'EE', 'TT', 'SE']:
-        return render_template('dashboard_data_user.html', user=member, user_type=user_type)
-    else:
-        return render_template('dashboard_data_user.html', user=member)
+    # Handle different user types
+    if user_type == 'TT':
+        return render_template('t-admin_main_page.html', user=member)
+    elif user_type == 'EE':
+        return render_template('e_admin_main.html', user=member)
+    elif user_type == 'SE':
+        return render_template('se_admin_main_page.html', user=member)
+    elif user_type == 'OC':
+        return render_template('o-convener_workspace.html', user=member)
+   
 
 # 提交问题（寻求帮助）
 @user_bp.route('/ask-for-help')

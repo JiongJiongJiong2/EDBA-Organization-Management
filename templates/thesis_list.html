@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thesis List</title>
+    <style>
+        .thesis-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .thesis-header {
+            color: #1e5799;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .thesis-list {
+            list-style: none;
+            padding: 0;
+        }
+        .thesis-item {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .thesis-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .thesis-title {
+            color: #1e5799;
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+        }
+        .thesis-abstract {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin: 0;
+        }
+        .thesis-meta {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="thesis-container">
+        <h2 class="thesis-header">Thesis List</h2>
+        
+        <input type="text" class="search-box" placeholder="Search theses..." 
+               oninput="filterTheses(this.value)">
+
+        {% if theses %}
+            <ul class="thesis-list" id="thesisList">
+                {% for thesis in theses %}
+                    <li class="thesis-item">
+                        <h3 class="thesis-title">{{ thesis.title }}</h3>
+                        <p class="thesis-abstract">{{ thesis.abstract }}</p>
+                        {% if thesis.author or thesis.date %}
+                            <div class="thesis-meta">
+                                {% if thesis.author %}
+                                    <span>Author: {{ thesis.author }}</span>
+                                {% endif %}
+                                {% if thesis.date %}
+                                    <span>• Date: {{ thesis.date }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="no-results">
+                No theses found.
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function filterTheses(query) {
+            query = query.toLowerCase();
+            const items = document.querySelectorAll('.thesis-item');
+            let hasResults = false;
+
+            items.forEach(item => {
+                const title = item.querySelector('.thesis-title').textContent.toLowerCase();
+                const abstract = item.querySelector('.thesis-abstract').textContent.toLowerCase();
+                
+                if (title.includes(query) || abstract.includes(query)) {
+                    item.style.display = '';
+                    hasResults = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            const noResults = document.querySelector('.no-results');
+            if (!hasResults) {
+                if (!noResults) {
+                    const message = document.createElement('div');
+                    message.className = 'no-results';
+                    message.textContent = 'No matching theses found.';
+                    document.querySelector('.thesis-list').after(message);
+                }
+            } else if (noResults) {
+                noResults.remove();
+            }
+        }
+    </script>
+</body>
+</html>
