@@ -126,10 +126,8 @@ def service_a():
     result = cursor.fetchone()
     conn.close()
 
-    if result and result[0]:
-        return '<h2>Course information sharing service is enabled</h2>'
-    else:
-        return '<h2>Course information sharing service is currently disabled</h2>'
+    enabled = result[0] if result else False
+    return render_template('course_info.html', enabled=enabled)
 
 @oconvener_bp.route('/service/a/settings', methods=['GET', 'POST'])
 def course_service_settings():

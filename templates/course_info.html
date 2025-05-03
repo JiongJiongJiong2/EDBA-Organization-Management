@@ -1,0 +1,88 @@
+<style>
+    .course-info-container {
+        padding: 20px;
+    }
+    .course-info-container h2 {
+        color: #1e5799;
+        margin-bottom: 20px;
+    }
+    .status-box {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .status-box h3 {
+        color: #333;
+        margin-bottom: 15px;
+    }
+    .status-indicator {
+        padding: 15px;
+        border-radius: 4px;
+    }
+    .status-enabled {
+        background: #E8F5E9;
+        color: #4CAF50;
+    }
+    .status-disabled {
+        background: #FFEBEE;
+        color: #f44336;
+    }
+    .status-text {
+        margin: 0;
+        font-weight: bold;
+    }
+    .service-text, .service-list {
+        color: #666;
+        line-height: 1.6;
+    }
+    .action-container {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    .manage-button {
+        display: inline-block;
+        padding: 10px 20px;
+        background: #1e5799;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="course-info-container">
+    <h2>Course Information Sharing Service</h2>
+    
+    <div class="status-box">
+        <h3>Service Status</h3>
+        <div class="status-indicator {% if enabled %}status-enabled{% else %}status-disabled{% endif %}">
+            {% if enabled %}
+            <p class="status-text">✅ Course information sharing service is currently enabled</p>
+            {% else %}
+            <p class="status-text">❌ Course information sharing service is currently disabled</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="info-box status-box">
+        <h3>About This Service</h3>
+        <p class="service-text">
+            The Course Information Sharing Service allows your organization to:
+        </p>
+        <ul class="service-list">
+            <li>Share course details with other organizations</li>
+            <li>Make course information searchable</li>
+            <li>Help students find relevant courses</li>
+        </ul>
+        
+        <div class="action-container">
+            <a href="{{ url_for('oconvener.course_service_settings') }}" 
+               onclick="loadContent(URLS.courseSetting); return false;"
+               class="manage-button">
+                Manage Settings
+            </a>
+        </div>
+    </div>
+</div>
