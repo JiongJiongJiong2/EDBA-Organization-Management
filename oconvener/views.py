@@ -317,6 +317,78 @@ def check_payment_service_route(organization_id):
     has_service = check_payment_service(organization_id)
     return jsonify({'hasPaymentService': has_service})
 
+@oconvener_bp.route('/configuration/<int:organization_id>')
+def configuration_interface(organization_id):
+    """Configuration interface for services"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Verify user has permission (must be PP of this organization)
+    if user.user_type != 'PP' or user.organization_id != organization_id:
+        flash('You do not have permission to configure services for this organization', 'error')
+        return redirect(url_for('user.dashboard', user_type=user.user_type))
+    
+    # Get organization's services (status 1 or 2)
+    services = db.session.execute(
+        db.select(Service)
+        .filter(Service.organization_id == organization_id)
+        .filter(Service.status.in_([1, 2]))
+        .order_by(Service.service_type)
+    ).scalars().all()
+    
+    return render_template('configuration_interface.html',
+                         services=services,
+                         user=user)
+
+@oconvener_bp.route('/submit_configuration/<int:service_id>', methods=['POST'])
+def submit_configuration(service_id):
+    """Submit service configuration"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    service = db.session.get(Service, service_id)
+    if not service:
+        flash('Service not found', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+        
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP' or user.organization_id != service.organization_id:
+        flash('You do not have permission to configure this service', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    try:
+        import json
+        # Update service configuration
+        service.url = request.form.get('url', '')
+        service.path = request.form.get('path', '')
+        service.method = request.form.get('method', 'POST')
+        
+        # Parse and validate JSON input
+        try:
+            input_json = json.loads(request.form.get('input_json', '{}'))
+            output_json = json.loads(request.form.get('output_json', '{}'))
+            service.input_json = input_json
+            service.output_json = output_json
+        except json.JSONDecodeError:
+            flash('Invalid JSON format in inputs or outputs', 'error')
+            return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
+        
+        db.session.commit()
+        flash('Service configuration updated successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating service configuration: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
+
 @oconvener_bp.route('/questions/b')
 def question_b():
     if 'user_id' not in session:

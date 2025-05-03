@@ -35,11 +35,10 @@
             <button type="configuration_interface">Configuration Interface</button>
         </form><br><br>
 
-        <form action="{{ url_for('oconvener.provide_course_info') }}" method="get" style="display: inline;">
-            <button type="submit" name="provide_course_info">Provide Course Information</button>
+        <form action="{{ url_for('user.provide_course_info') }}" method="get" style="display: inline;">
+            <button type="submit">Provide Course Information</button>
         </form><br><br>
     {% endif %}
-
     {% if user.user_type in ['EE', 'SE'] %}
         <form action="{{ url_for('admin.admin_applications') }}" method="get" style="display: inline;">
             <button type="submit">Manage Applications</button>

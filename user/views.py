@@ -307,3 +307,40 @@ def course_info_check():
         courses = []
     
     return render_template('course_info_check.html', courses=courses)
+
+@user_bp.route('/provide-course-info', methods=['GET', 'POST'])
+def provide_course_info():
+    """Provide course information interface for PP users"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can provide course information', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    if request.method == 'POST':
+        course_name = request.form.get('course_name')
+        course_description = request.form.get('course_description')
+        
+        if not course_name:
+            flash('Course name is required', 'error')
+            return redirect(url_for('user.provide_course_info'))
+        
+        try:
+            new_course = CourseInformation(
+                organization_id=user.organization_id,
+                name=course_name,
+                description=course_description
+            )
+            db.session.add(new_course)
+            db.session.commit()
+            flash('Course information has been successfully added', 'success')
+            return redirect(url_for('user.dashboard', user_type=user.user_type))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Failed to add course information: {str(e)}', 'error')
+            return redirect(url_for('user.provide_course_info'))
+    
+    return render_template('provide_course_info.html')
