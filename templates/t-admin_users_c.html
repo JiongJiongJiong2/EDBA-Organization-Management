@@ -31,7 +31,7 @@
         }
 
         function goBack() {
-            fetch("{{ url_for('t_admin.main_page') }}")
+            fetch("{{ url_for('admin.t_admin_main_page') }}")
                 .then(response => response.text())
                 .then(html => {
                     document.body.innerHTML = html;
@@ -43,7 +43,7 @@
 
         function handleAction(event, action, userId) {
             event.preventDefault();
-            const baseUrl = "{{ url_for('t_admin.users_c') }}";
+            const baseUrl = "{{ url_for('admin.t_admin_users_c') }}";
             const url = `${baseUrl}/${action}/${userId}`;
             fetch(url, {
                 method: 'POST'
