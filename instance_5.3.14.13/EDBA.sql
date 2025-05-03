@@ -45,10 +45,9 @@ create table bank_accounts
         primary key,
     organization_id INTEGER      not null
         references organizations,
-    bank            VARCHAR(255) not null,
     name            VARCHAR(255) not null,
-    number            VARCHAR(255) not null,
     password        VARCHAR(255) not null,
+    balance         INTEGER
 );
 
 create table course_info

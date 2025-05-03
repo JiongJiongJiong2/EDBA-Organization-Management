@@ -42,7 +42,16 @@ class Service(db.Model):
     service_id = db.Column(db.Integer, primary_key=True)
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
     service_type = db.Column(db.String(1), nullable=False)
-    # 'S': thesis search, 'P': PDF download, 'C': course info, 'A': student anthendicate, 'R': student GPA record and year info
+
+    '''
+    'S': thesis search, 
+    'P': PDF download, 
+    'C': course info, 
+    'A': student anthendicate, 
+    'R': student GPA record and year info, 
+    'M': transfer money
+    '''
+    
     status = db.Column(db.Integer, nullable=False)  # 服务状态: 0, 1, 2
     cost = db.Column(db.Integer, nullable=False)
 
@@ -101,15 +110,6 @@ class CourseInformation(db.Model):
 
     organization = db.relationship('Organization', backref='courses')
 
-class BankAccount(db.Model):
-    __tablename__ = 'bank_accounts'
-    account_id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    balance = db.Column(db.Integer, nullable=True)
-
-    organization = db.relationship('Organization', back_populates='bank_accounts')
 
 class ApplicationDocument(db.Model):
     __tablename__ = 'application_documents'
@@ -120,3 +120,28 @@ class ApplicationDocument(db.Model):
     upload_timestamp = db.Column(db.DateTime, nullable=False, server_default=db.func.current_timestamp())
 
     application = db.relationship('Application', backref='documents')
+
+
+#!=!====================================================================================================================================================
+'''
+class BankAccount(db.Model):
+    __tablename__ = 'bank_accounts'
+    account_id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    balance = db.Column(db.Integer, nullable=True)
+
+    organization = db.relationship('Organization', back_populates='bank_accounts')
+'''
+class BankAccount(db.Model):
+    __tablename__ = 'bank_accounts'
+    account_id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
+    bank = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    number = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+    organization = db.relationship('Organization', back_populates='bank_accounts')
+#======================================================================================================================================================

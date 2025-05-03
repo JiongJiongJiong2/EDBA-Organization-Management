@@ -45,7 +45,7 @@
             'R': 'Student GPA Record'
         } %}
 
-        {% for service in services %}
+        {% for service in services if service.service_type != 'M' %}
             <div class="service-item">
                 <h3>{{ service_type_names.get(service.service_type, 'Unknown Service') }}</h3>
                 <p>Status: {{ "Active" if service.status == 2 else "Pending" }}</p>

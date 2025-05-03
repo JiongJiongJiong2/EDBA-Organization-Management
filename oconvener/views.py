@@ -7,11 +7,74 @@ import uuid
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Service, CourseInformation
+from models import db, Member, Service, CourseInformation, BankAccount
 
 import json
 
 # Database connection function for legacy code
+# Add payment service check function
+def check_payment_service(organization_id):
+    # Query for organization's payment service
+    payment_service = db.session.execute(
+        db.select(Service)
+        .filter(Service.organization_id == organization_id)
+        .filter(Service.service_type == 'M')
+        .filter(Service.status == 2)
+    ).scalar_one_or_none()
+    
+    return payment_service is not None
+
+def process_payment(from_org_id, to_org_id, amount):
+    try:
+        # Get payment service for sending organization
+        payment_service = db.session.execute(
+            db.select(Service)
+            .filter(Service.organization_id == from_org_id)
+            .filter(Service.service_type == 'M')
+            .filter(Service.status == 2)
+        ).scalar_one_or_none()
+        
+        if not payment_service:
+            return False, "No transfer service available"
+        
+        # Get bank account info for both parties
+        from_account = db.session.execute(
+            db.select(BankAccount)
+            .filter(BankAccount.organization_id == from_org_id)
+        ).scalar_one_or_none()
+        
+        to_account = db.session.execute(
+            db.select(BankAccount)
+            .filter(BankAccount.organization_id == to_org_id)
+        ).scalar_one_or_none()
+        
+        if not from_account or not to_account:
+            return False, "Bank account information not found"
+        
+        # Prepare payment request data
+        payment_data = {
+            "from_bank": from_account.bank,
+            "from_name": from_account.name,
+            "from_account": from_account.number,
+            "password": from_account.password,
+            "to_bank": to_account.bank,
+            "to_name": to_account.name,
+            "to_account": to_account.number,
+            "amount": amount
+        }
+        
+        # Send payment request
+        url = payment_service.url + payment_service.path
+        response = requests.post(url, json=payment_data)
+        
+        if response.status_code == 200:
+            return True, response.json()
+        else:
+            return False, "Payment failed"
+            
+    except Exception as e:
+        return False, str(e)
+
 def get_db_connection():
     conn = sqlite3.connect('instance/EDBA.db')  # Updated path to match Flask's instance folder
     conn.row_factory = sqlite3.Row
@@ -247,6 +310,12 @@ def question_a():
             return jsonify({'success': False, 'message': f'Submission failed: {str(e)}'})
     
     return render_template('o-convener_question_a.html')
+
+@oconvener_bp.route('/check_payment_service/<int:organization_id>')
+def check_payment_service_route(organization_id):
+    """Check if an organization has payment service available"""
+    has_service = check_payment_service(organization_id)
+    return jsonify({'hasPaymentService': has_service})
 
 @oconvener_bp.route('/questions/b')
 def question_b():
