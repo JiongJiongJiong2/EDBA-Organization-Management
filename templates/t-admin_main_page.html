@@ -2,6 +2,27 @@
 <html>
 <head>
     <title>Main Page</title>
+    <script>
+        const URLS = {
+            oConvenerUsers: "{{ url_for('admin.t_admin_users_a') }}",
+            eAdminUsers: "{{ url_for('admin.t_admin_users_b') }}",
+            seAdminUsers: "{{ url_for('admin.t_admin_users_c') }}",
+            tAdminUsers: "{{ url_for('admin.t_admin_users_d') }}",
+            answeredQuestions: "{{ url_for('admin.t_admin_question_a') }}",
+            unansweredQuestions: "{{ url_for('admin.t_admin_question_b') }}"
+        };
+
+        function loadContent(url) {
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading content:', error);
+                });
+        }
+    </script>
     <style>
         .card {
             background-color: white;
@@ -44,36 +65,36 @@
     <div style="width: 100%; height: 100%; padding: 20px;">
         <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Main Page</h2>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div class="card o-convener" onclick="loadContent('/t_admin/users/a')">
+            <div class="card o-convener" onclick="loadContent(URLS.oConvenerUsers)">
                 <h3 style="color: #FF6B6B;">O-Convener</h3>
                 <p>Manage O-Convener users</p>
             </div>
             
-            <div class="card e-admin" onclick="loadContent('/t_admin/users/b')">
+            <div class="card e-admin" onclick="loadContent(URLS.eAdminUsers)">
                 <h3 style="color: #4ECDC4;">E-Admin</h3>
                 <p>Manage E-Admin users</p>
             </div>
             
-            <div class="card se-admin" onclick="loadContent('/t_admin/users/c')">
+            <div class="card se-admin" onclick="loadContent(URLS.seAdminUsers)">
                 <h3 style="color: #45B7D1;">SE-Admin</h3>
                 <p>Manage SE-Admin users</p>
             </div>
             
-            <div class="card t-admin" onclick="loadContent('/t_admin/users/d')">
+            <div class="card t-admin" onclick="loadContent(URLS.tAdminUsers)">
                 <h3 style="color: #96CEB4;">T-Admin</h3>
                 <p>Manage T-Admin users</p>
             </div>
             
-            <div class="card answered-questions" onclick="loadContent('/t_admin/questions/a')">
+            <div class="card answered-questions" onclick="loadContent(URLS.answeredQuestions)">
                 <h3 style="color: #FFEEAD;">Answered Questions</h3>
                 <p>View answered questions list</p>
             </div>
             
-            <div class="card unanswered-questions" onclick="loadContent('/t_admin/questions/b')">
+            <div class="card unanswered-questions" onclick="loadContent(URLS.unansweredQuestions)">
                 <h3 style="color: #D4A5A5;">Unanswered Questions</h3>
                 <p>View unanswered questions list</p>
             </div>
         </div>
     </div>
 </body>
-</html> 
+</html>

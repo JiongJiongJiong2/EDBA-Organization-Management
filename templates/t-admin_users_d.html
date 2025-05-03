@@ -2,6 +2,61 @@
 <html>
 <head>
     <title>T-Admin Management</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners to all action buttons
+            document.querySelectorAll('.action-button').forEach(button => {
+                button.addEventListener('click', function(event) {
+                    const action = this.dataset.action;
+                    const userId = this.dataset.userid;
+                    handleAction(event, action, userId);
+                });
+            });
+        });
+
+        function handleSearch(event) {
+            event.preventDefault();
+            const searchQuery = document.querySelector('input[name="search"]').value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('search', searchQuery);
+            
+            fetch(url.toString())
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error searching:', error);
+                });
+        }
+
+        function goBack() {
+            fetch("{{ url_for('t_admin.main_page') }}")
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error returning to main page:', error);
+                });
+        }
+
+        function handleAction(event, action, userId) {
+            event.preventDefault();
+            const baseUrl = "{{ url_for('t_admin.users_d') }}";
+            const url = `${baseUrl}/${action}/${userId}`;
+            fetch(url, {
+                method: 'POST'
+            })
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error performing action:', error);
+                });
+        }
+    </script>
     <style>
         .search-form {
             display: flex;
@@ -66,9 +121,10 @@
     <div style="width: 100%; height: 100%; padding: 20px;">
         <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">T-Admin Management</h2>
         <div class="search-form">
-            <form method="GET">
+            <form onsubmit="handleSearch(event)">
                 <input type="text" name="search" placeholder="Search T-Admin..." value="{{ search_query }}" class="search-input">
                 <button type="submit" class="search-button">Search</button>
+                <button type="button" onclick="goBack()" style="margin-left: 10px; background-color: #666; color: white; padding: 8px 16px; border: none; border-radius: 4px;">Back</button>
             </form>
         </div>
         
@@ -119,9 +175,11 @@
                                 <td>{{ user['user_type'] }}</td>
                                 <td>{{ user['organization_id'] }}</td>
                                 <td>
-                                    <form method="POST" action="/t_admin/revoke_eadmin/{{ user['user_id'] }}" style="display: inline;">
-                                        <button type="submit" class="action-button revoke-button">Revoke Authorization</button>
-                                    </form>
+                                    <button class="action-button revoke-button"
+                                            data-action="revoke_eadmin"
+                                            data-userid="{{user['user_id']}}">
+                                        Revoke Authorization
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -151,9 +209,11 @@
                                 <td>{{ user['user_type'] }}</td>
                                 <td>{{ user['organization_id'] }}</td>
                                 <td>
-                                    <form method="POST" action="/t_admin/grant_eadmin/{{ user['user_id'] }}" style="display: inline;">
-                                        <button type="submit" class="action-button authorize-button">Authorize</button>
-                                    </form>
+                                    <button class="action-button authorize-button"
+                                            data-action="grant_eadmin"
+                                            data-userid="{{user['user_id']}}">
+                                        Authorize
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -164,4 +224,4 @@
         </div>
     </div>
 </body>
-</html> 
+</html>

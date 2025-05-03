@@ -2,6 +2,34 @@
 <html>
 <head>
     <title>O-Convener List</title>
+    <script>
+        function handleSearch(event) {
+            event.preventDefault();
+            const searchQuery = document.querySelector('input[name="search"]').value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('search', searchQuery);
+            
+            fetch(url.toString())
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error searching:', error);
+                });
+        }
+
+        function goBack() {
+            fetch("{{ url_for('t_admin.main_page') }}")
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error returning to main page:', error);
+                });
+        }
+    </script>
     <style>
         .search-form {
             display: flex;
@@ -47,9 +75,10 @@
     <div style="width: 100%; height: 100%; padding: 20px;">
         <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">O-Convener List</h2>
         <div class="search-form">
-            <form method="GET">
+            <form onsubmit="handleSearch(event)">
                 <input type="text" name="search" placeholder="Search user..." value="{{ search_query }}" class="search-input">
                 <button type="submit" class="search-button">Search</button>
+                <button type="button" onclick="goBack()" style="margin-left: 10px; background-color: #666;">Back</button>
             </form>
         </div>
         <div class="table-container">
@@ -76,4 +105,4 @@
         </div>
     </div>
 </body>
-</html> 
+</html>
