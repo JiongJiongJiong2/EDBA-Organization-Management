@@ -1,5 +1,5 @@
 # oconvener/views.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, abort
 from werkzeug.utils import secure_filename
 import requests
 import sqlite3
@@ -269,6 +269,65 @@ def service_c():
         return f"<h2>Failed to get thesis data: {e}</h2>"
 
     return render_template('thesis_list.html', theses=thesis_results)
+
+@oconvener_bp.route('/manage-services/<int:organization_id>')
+def manage_services(organization_id):
+    """Service management interface for O-Convener"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        flash('Only O-Conveners can manage services', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    # Get all services for the organization
+    services = db.session.execute(
+        db.select(Service)
+        .filter(Service.organization_id == organization_id)
+        .order_by(Service.service_type)
+    ).scalars().all()
+    
+    return render_template('service_management.html',
+                         services=services,
+                         user=user)
+
+@oconvener_bp.route('/update-service-status/<int:service_id>', methods=['POST'])
+def update_service_status(service_id):
+    """Update service status by O-Convener"""
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Please login first'}), 401
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+    
+    service = db.session.get(Service, service_id)
+    if not service:
+        return jsonify({'status': 'error', 'message': 'Service not found'}), 404
+    
+    try:
+        new_status = int(request.form.get('status', 0))
+        # Only allow setting status to 0 or 1
+        # Status 2 can only be set when provider configures the service
+        if new_status not in [0, 1] and service.status != 2:
+            return jsonify({'status': 'error', 'message': 'Invalid status value'}), 400
+            
+        if new_status != 2:  # Don't allow changing status 2 back to other statuses
+            service.status = new_status
+            db.session.commit()
+            flash('Service status updated successfully', 'success')
+        else:
+            flash('Cannot set service status to 2 directly', 'error')
+            
+    except ValueError:
+        flash('Invalid status value', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating service status: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.manage_services', organization_id=service.organization_id))
 
 @oconvener_bp.route('/')
 def index():

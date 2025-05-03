@@ -73,6 +73,7 @@
                     <span style="font-size: 12px; margin-left: 5px;">▼</span> Service
                 </li>
                 <ul id="service-submenu" style="list-style: none; padding-left: 20px; display: none;">
+                    <li onclick="loadContent(URLS.serviceManagement)">Service Management</li>
                     <li onclick="loadContent(URLS.courseInfo)">Course information sharing</li>
                     <li onclick="loadContent(URLS.courseSetting)">Course setting</li>
                     <li onclick="loadContent(URLS.studentAuth)">Student identity authentication</li>
@@ -92,6 +93,7 @@
             bankAccount: "{{ url_for('oconvener.account_a') }}",
             memberList: "{{ url_for('oconvener.list_a') }}",
             organizationInfo: "{{ url_for('oconvener.information_a') }}",
+            serviceManagement: "{{ url_for('oconvener.manage_services', organization_id=session.get('organization_id')) }}",
             courseInfo: "{{ url_for('oconvener.service_a') }}",
             courseSetting: "{{ url_for('oconvener.course_service_settings') }}",
             studentAuth: "{{ url_for('oconvener.service_b') }}",

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Service Management</title>
+    <style>
+        .service-item {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .service-status {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .status-0 { color: red; }
+        .status-1 { color: orange; }
+        .status-2 { color: green; }
+    </style>
+</head>
+<body>
+    <h2>Service Management Interface</h2>
+    <p>Welcome, {{ user.email }}!</p>
+    
+    {% if services %}
+        {% set service_type_names = {
+            'S': 'Thesis Search',
+            'P': 'PDF Download',
+            'C': 'Course Info',
+            'A': 'Student Authentication',
+            'R': 'Student GPA Record',
+            'M': 'Money Transfer'
+        } %}
+        
+        {% set status_descriptions = {
+            0: 'Not Open (Providers cannot see this service)',
+            1: 'Open (Waiting for provider data)',
+            2: 'Open and Data Provided'
+        } %}
+
+        {% for service in services %}
+            <div class="service-item">
+                <h3>{{ service_type_names.get(service.service_type, 'Unknown Service') }}</h3>
+                <p class="status-{{ service.status }}">
+                    Current Status: {{ status_descriptions.get(service.status, 'Unknown Status') }}
+                </p>
+                
+                <form action="{{ url_for('oconvener.update_service_status', service_id=service.service_id) }}" method="post">
+                    <select name="status" required>
+                        <option value="0" {% if service.status == 0 %}selected{% endif %}>Not Open</option>
+                        <option value="1" {% if service.status == 1 %}selected{% endif %}>Open (Waiting for Data)</option>
+                        {% if service.status == 2 %}
+                        <option value="2" selected>Open with Data</option>
+                        {% endif %}
+                    </select>
+                    <button type="submit">Update Status</button>
+                </form>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No services found for this organization.</p>
+    {% endif %}
+    
+    <br>
+    <a href="{{ url_for('oconvener.workspace') }}">Back to Workspace</a>
+</body>
+</html>
