@@ -38,7 +38,8 @@ def dashboard(user_type):
         return render_template('se_admin_main_page.html', user=member)
     elif user_type == 'OC':
         return render_template('oc_workspace_oc-workspace.html', user=member)
-   
+    else:
+        return render_template('dashboard_data_user.html', user=member)
 
 # 提交问题（寻求帮助）
 @user_bp.route('/ask-for-help')
