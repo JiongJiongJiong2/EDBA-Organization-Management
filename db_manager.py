@@ -228,3 +228,28 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+'''
+    用户类型  
+    Admin role:
+        O-Convener:     OC 
+        T-admin:        TT
+        E-admin:        EE 
+        Senior E-admin: SE 
+    
+    Normal user role:
+        Data provider:          PP 
+        Public data consumer:   PC
+        Private data consumer:  CC 
+
+    'S': thesis search, 
+    'P': PDF download, 
+    'C': course info, 
+    'A': student anthendicate, 
+    'R': student GPA record and year info, 
+    'M': transfer money
+'''

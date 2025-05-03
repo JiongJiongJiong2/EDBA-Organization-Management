@@ -48,7 +48,7 @@
         {% for service in services if service.service_type != 'M' %}
             <div class="service-item">
                 <h3>{{ service_type_names.get(service.service_type, 'Unknown Service') }}</h3>
-                <p>Status: {{ "Active" if service.status == 2 else "Pending" }}</p>
+                <p>Status: {% if service.status == 2 %}Active{% elif service.status == 1 %}Ready for Configuration{% else %}Pending{% endif %}</p>
                 <button onclick="toggleConfigForm('{{ service.service_id }}')">Configuration</button>
                 
                 <div id="form-{{ service.service_id }}" class="config-form">

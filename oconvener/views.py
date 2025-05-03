@@ -404,13 +404,22 @@ def configuration_interface(organization_id):
         flash('You do not have permission to configure services for this organization', 'error')
         return redirect(url_for('user.dashboard', user_type=user.user_type))
     
-    # Get organization's services (status 1 or 2)
-    services = db.session.execute(
-        db.select(Service)
-        .filter(Service.organization_id == organization_id)
-        .filter(Service.status.in_([1, 2]))
-        .order_by(Service.service_type)
-    ).scalars().all()
+    # For providers, only show status 1 services from their organization
+    # For others, show both status 1 and 2 services
+    if user.user_type == 'PP':
+        services = db.session.execute(
+            db.select(Service)
+            .filter(Service.organization_id == organization_id)
+            .filter(Service.status == 1)
+            .order_by(Service.service_type)
+        ).scalars().all()
+    else:
+        services = db.session.execute(
+            db.select(Service)
+            .filter(Service.organization_id == organization_id)
+            .filter(Service.status.in_([1, 2]))
+            .order_by(Service.service_type)
+        ).scalars().all()
     
     return render_template('configuration_interface.html',
                          services=services,
@@ -446,6 +455,10 @@ def submit_configuration(service_id):
             output_json = json.loads(request.form.get('output_json', '{}'))
             service.input_json = input_json
             service.output_json = output_json
+            
+            # When configuration is complete, update status to 2 (Active)
+            if service.status == 1:
+                service.status = 2
         except json.JSONDecodeError:
             flash('Invalid JSON format in inputs or outputs', 'error')
             return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
