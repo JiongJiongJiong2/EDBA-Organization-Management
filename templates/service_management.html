@@ -16,8 +16,19 @@
             background-color: #f9f9f9;
         }
         .status-0 { color: red; }
-        .status-1 { color: orange; }
-        .status-2 { color: green; }
+        .status-1 { color: green; }
+        .price-input {
+            margin-top: 10px;
+            padding: 5px;
+        }
+        .price-input.hidden {
+            display: none;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -35,9 +46,8 @@
         } %}
         
         {% set status_descriptions = {
-            0: 'Not Open (Providers cannot see this service)',
-            1: 'Open (Waiting for provider data)',
-            2: 'Open and Data Provided'
+            0: 'Not Open',
+            1: 'Open'
         } %}
 
         {% for service in services %}
@@ -47,15 +57,30 @@
                     Current Status: {{ status_descriptions.get(service.status, 'Unknown Status') }}
                 </p>
                 
-                <form action="{{ url_for('oconvener.update_service_status', service_id=service.service_id) }}" method="post">
+                <form action="{{ url_for('oconvener.update_service_status', service_id=service.service_id) }}" 
+                      method="post" 
+                      onsubmit="return validateForm(this)">
                     <select name="status" required>
                         <option value="0" {% if service.status == 0 %}selected{% endif %}>Not Open</option>
-                        <option value="1" {% if service.status == 1 %}selected{% endif %}>Open (Waiting for Data)</option>
-                        {% if service.status == 2 %}
-                        <option value="2" selected>Open with Data</option>
-                        {% endif %}
+                        <option value="1" {% if service.status == 1 %}selected{% endif %}>Open</option>
                     </select>
-                    <button type="submit">Update Status</button>
+                    <div style="margin-top: 10px;">
+                        <label>
+                            <input type="checkbox" name="is_paid" 
+                                   onchange="togglePriceInput(this)" 
+                                   {% if service.cost > 0 %}checked{% endif %}>
+                            Paid Service
+                        </label>
+                        <div class="price-input {% if service.cost == 0 %}hidden{% endif %}">
+                            <label>Price:</label>
+                            <input type="number" name="cost" 
+                                   min="1" step="1" 
+                                   value="{{ service.cost if service.cost > 0 else '' }}"
+                                   placeholder="Enter price">
+                            <div class="error-message"></div>
+                        </div>
+                    </div>
+                    <button type="submit">Update Service</button>
                 </form>
             </div>
         {% endfor %}
@@ -65,5 +90,37 @@
     
     <br>
     <a href="{{ url_for('oconvener.workspace') }}">Back to Workspace</a>
+    
+    <script>
+        function togglePriceInput(checkbox) {
+            const priceInput = checkbox.closest('form').querySelector('.price-input');
+            const costInput = priceInput.querySelector('input[name="cost"]');
+            
+            if (checkbox.checked) {
+                priceInput.classList.remove('hidden');
+                costInput.required = true;
+            } else {
+                priceInput.classList.add('hidden');
+                costInput.required = false;
+                costInput.value = '';
+            }
+        }
+
+        function validateForm(form) {
+            const isPaid = form.querySelector('input[name="is_paid"]').checked;
+            if (isPaid) {
+                const costInput = form.querySelector('input[name="cost"]');
+                const cost = parseInt(costInput.value);
+                const errorDiv = form.querySelector('.error-message');
+                
+                if (isNaN(cost) || cost <= 0) {
+                    errorDiv.textContent = 'Please enter a valid positive number for price';
+                    return false;
+                }
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

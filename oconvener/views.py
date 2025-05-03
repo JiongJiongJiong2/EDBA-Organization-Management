@@ -309,20 +309,31 @@ def update_service_status(service_id):
     
     try:
         new_status = int(request.form.get('status', 0))
+        is_paid = request.form.get('is_paid') is not None
+        cost = 0
+
         # Only allow setting status to 0 or 1
-        # Status 2 can only be set when provider configures the service
-        if new_status not in [0, 1] and service.status != 2:
-            return jsonify({'status': 'error', 'message': 'Invalid status value'}), 400
-            
-        if new_status != 2:  # Don't allow changing status 2 back to other statuses
-            service.status = new_status
-            db.session.commit()
-            flash('Service status updated successfully', 'success')
-        else:
-            flash('Cannot set service status to 2 directly', 'error')
+        if new_status not in [0, 1]:
+            flash('Invalid status value', 'error')
+            return redirect(url_for('oconvener.manage_services', organization_id=service.organization_id))
+
+        if is_paid:
+            try:
+                cost = int(request.form.get('cost', 0))
+                if cost <= 0:
+                    flash('Price must be a positive number', 'error')
+                    return redirect(url_for('oconvener.manage_services', organization_id=service.organization_id))
+            except ValueError:
+                flash('Invalid price value', 'error')
+                return redirect(url_for('oconvener.manage_services', organization_id=service.organization_id))
+        
+        service.status = new_status
+        service.cost = cost
+        db.session.commit()
+        flash('Service status and price updated successfully', 'success')
             
     except ValueError:
-        flash('Invalid status value', 'error')
+        flash('Invalid input values', 'error')
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating service status: {str(e)}', 'error')
