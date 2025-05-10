@@ -1,20 +1,30 @@
 <div style="width: 100%; height: 100%; padding: 20px;">
     <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Main Page</h2>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #4ECDC4; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_users_b') }}')">
-            <h3 style="color: #4ECDC4; margin-bottom: 10px;">E-Admin</h3>
-            <p style="color: #666;">Manage E-Admin</p>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+        
+        <!-- O-Convener申请管理 -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #4ECDC4; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_applications') }}')">
+            <h3 style="color: #4ECDC4; margin-bottom: 10px;">O-Convener Applications</h3>
+            <p style="color: #666;">Process registration applications</p>
         </div>
 
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #FFEEAD; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_question_a') }}')">
-            <h3 style="color: #FFEEAD; margin-bottom: 10px;">Answered Question</h3>
-            <p style="color: #666;">View the list of answered questions</p>
+        <!-- 数据共享政策 -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #95DAC1; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_policies') }}')">
+            <h3 style="color: #95DAC1; margin-bottom: 10px;">Data Sharing Policies</h3>
+            <p style="color: #666;">Manage platform data sharing policies</p>
         </div>
 
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #D4A5A5; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_question_b') }}')">
-            <h3 style="color: #D4A5A5; margin-bottom: 10px;">Unanswered Question</h3>
-            <p style="color: #666;">View the list of unanswered questions</p>
+        <!-- 系统日志 -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #B6B8D6; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_logs') }}')">
+            <h3 style="color: #B6B8D6; margin-bottom: 10px;">System Logs</h3>
+            <p style="color: #666;">View system activity logs</p>
         </div>
+
+        <!-- 银行设置 -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #FFA69E; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_bank_settings') }}')">
+            <h3 style="color: #FFA69E; margin-bottom: 10px;">Bank Settings</h3>
+            <p style="color: #666;">Manage bank account and membership fee</p>
+        </div>
+
     </div>
 </div>

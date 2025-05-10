@@ -1,0 +1,70 @@
+<div style="width: 100%; height: 100%; padding: 20px;">
+    <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">E-DBA Bank Account Settings</h2>
+
+    <!-- 银行账户信息 -->
+    <div style="margin-bottom: 30px; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
+        <h3 style="margin-bottom: 20px; color: #333;">Bank Account Information</h3>
+        <form method="POST" action="{{ url_for('admin.update_bank_account') }}" style="display: grid; gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px;">Account Number</label>
+                <input type="text" name="account_number" value="{{ bank_account.account_number if bank_account else '' }}" required
+                       pattern="[0-9]+" title="Please enter a valid account number"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 5px;">Membership Fee (in currency unit)</label>
+                <input type="number" name="membership_fee" value="{{ bank_account.membership_fee if bank_account else 0 }}"
+                       min="0" step="0.01" required
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <div style="text-align: right;">
+                <button type="submit"
+                        style="padding: 8px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 当前费用说明 -->
+    {% if bank_account %}
+    <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom: 15px; color: #333;">Current Settings</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; font-weight: bold;">Bank Account Number:</td>
+                <td style="padding: 12px;">{{ bank_account.account_number }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; font-weight: bold;">Current Membership Fee:</td>
+                <td style="padding: 12px;">{{ bank_account.membership_fee }} currency units</td>
+            </tr>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 帮助信息 -->
+    <div style="margin-top: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 4px;">
+        <h4 style="margin-bottom: 10px; color: #1976d2;">Important Information</h4>
+        <ul style="margin: 0; padding-left: 20px; color: #555;">
+            <li style="margin-bottom: 5px;">The bank account number must be a valid number.</li>
+            <li style="margin-bottom: 5px;">Membership fee must be a positive number.</li>
+            <li style="margin-bottom: 5px;">Changes to these settings will affect all new registrations.</li>
+            <li>Existing members will be notified of any changes to the membership fee.</li>
+        </ul>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div style="margin-top: 20px; padding: 15px; border-radius: 4px; 
+                          background-color: {% if category == 'success' %}#dff0d8{% elif category == 'error' %}#f2dede{% else %}#fcf8e3{% endif %};
+                          color: {% if category == 'success' %}#3c763d{% elif category == 'error' %}#a94442{% else %}#8a6d3b{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>

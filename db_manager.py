@@ -9,6 +9,7 @@ class DBManager:
     def __init__(self):
         self.conn = None
         self.cursor = None
+        self.backup = {}
 
     def connect(self):
         try:
@@ -53,9 +54,81 @@ class DBManager:
         except sqlite3.Error as e:
             print(f"Error viewing table: {e}")
 
+    def backup_data(self):
+        """备份所有表的数据"""
+        tables = self.get_tables()
+        for table in tables:
+            try:
+                self.cursor.execute(f"SELECT * FROM {table}")
+                columns = [description[0] for description in self.cursor.description]
+                rows = self.cursor.fetchall()
+                self.backup[table] = {
+                    'columns': columns,
+                    'rows': [dict(row) for row in rows]
+                }
+                print(f"Backed up {len(rows)} records from {table}")
+            except sqlite3.Error as e:
+                print(f"Error backing up table {table}: {e}")
+
+    def restore_data(self):
+        """恢复备份的数据"""
+        for table, data in self.backup.items():
+            try:
+                if not data['rows']:
+                    continue
+                
+                columns = data['columns']
+                placeholders = ','.join(['?' for _ in columns])
+                column_names = ','.join(columns)
+                query = f"INSERT INTO {table} ({column_names}) VALUES ({placeholders})"
+                
+                for row in data['rows']:
+                    values = [row[col] for col in columns]
+                    try:
+                        self.cursor.execute(query, values)
+                    except sqlite3.Error as e:
+                        print(f"Error restoring row in {table}: {e}")
+                        continue
+                
+                self.conn.commit()
+                print(f"Restored {len(data['rows'])} records to {table}")
+            except sqlite3.Error as e:
+                print(f"Error restoring table {table}: {e}")
+                self.conn.rollback()
+
+    def recreate_database(self):
+        """重新创建数据库表"""
+        try:
+            print("Backing up existing data...")
+            self.backup_data()
+            
+            print("\nDropping existing tables...")
+            tables = self.get_tables()
+            for table in tables:
+                try:
+                    self.cursor.execute(f"DROP TABLE IF EXISTS {table}")
+                    print(f"Dropped table: {table}")
+                except sqlite3.Error as e:
+                    print(f"Error dropping table {table}: {e}")
+            
+            print("\nCreating new tables...")
+            # 从models.py读取并创建新表
+            from models import db
+            import app
+            with app.app.app_context():
+                db.create_all()
+                print("Created all new tables")
+            
+            print("\nRestoring data...")
+            self.restore_data()
+            
+            print("\nDatabase recreation completed successfully!")
+        except Exception as e:
+            print(f"Error recreating database: {e}")
+            self.conn.rollback()
+
     def add_record(self, table_name):
         try:
-            # Get column info
             columns = self.get_table_info(table_name)
             values = []
             
@@ -69,7 +142,6 @@ class DBManager:
                 is_pk = col['pk']
                 
                 if is_pk:
-                    # For primary key, get the next available ID
                     self.cursor.execute(f"SELECT MAX({name}) FROM {table_name}")
                     max_id = self.cursor.fetchone()[0]
                     next_id = 1 if max_id is None else max_id + 1
@@ -88,7 +160,6 @@ class DBManager:
                         values.append(value)
                     break
 
-            # Construct and execute INSERT query
             placeholders = ','.join(['?' for _ in columns])
             query = f"INSERT INTO {table_name} VALUES ({placeholders})"
             self.cursor.execute(query, values)
@@ -101,14 +172,11 @@ class DBManager:
 
     def update_record(self, table_name):
         try:
-            # Get primary key column
             columns = self.get_table_info(table_name)
             pk_col = next(col['name'] for col in columns if col['pk'])
             
-            # Show current records
             self.view_table(table_name)
             
-            # Get record to update
             record_id = input(f"\nEnter {pk_col} of record to update: ")
             self.cursor.execute(f"SELECT * FROM {table_name} WHERE {pk_col} = ?", (record_id,))
             record = self.cursor.fetchone()
@@ -128,7 +196,7 @@ class DBManager:
             
             for col in columns:
                 name = col['name']
-                if col['pk']:  # Skip primary key
+                if col['pk']:
                     continue
                     
                 new_value = input(f"{name}: ").strip()
@@ -151,14 +219,11 @@ class DBManager:
 
     def delete_record(self, table_name):
         try:
-            # Get primary key column
             columns = self.get_table_info(table_name)
             pk_col = next(col['name'] for col in columns if col['pk'])
             
-            # Show current records
             self.view_table(table_name)
             
-            # Get record to delete
             record_id = input(f"\nEnter {pk_col} of record to delete: ")
             self.cursor.execute(f"SELECT * FROM {table_name} WHERE {pk_col} = ?", (record_id,))
             record = self.cursor.fetchone()
@@ -189,11 +254,12 @@ def main():
         print("2. Add record")
         print("3. Update record")
         print("4. Delete record")
-        print("5. Exit")
+        print("5. Recreate database")
+        print("6. Exit")
         
-        choice = input("\nEnter your choice (1-5): ")
+        choice = input("\nEnter your choice (1-6): ")
         
-        if choice == '5':
+        if choice == '6':
             break
             
         if choice in ['1', '2', '3', '4']:
@@ -220,18 +286,20 @@ def main():
                     print("Invalid table number!")
             except ValueError:
                 print("Invalid input! Please enter a number.")
+        elif choice == '5':
+            confirm = input("Are you sure you want to recreate the database? This will rebuild all tables. (y/N): ")
+            if confirm.lower() == 'y':
+                db.recreate_database()
+            else:
+                print("Operation cancelled.")
         else:
-            print("Invalid choice! Please enter a number between 1 and 5.")
+            print("Invalid choice! Please enter a number between 1 and 6.")
 
     db.close()
     print("\nGoodbye!")
 
 if __name__ == "__main__":
     main()
-
-
-
-
 
 '''
     用户类型  

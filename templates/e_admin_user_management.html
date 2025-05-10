@@ -57,83 +57,6 @@
             flex: 1;
             padding: 20px;
         }
-        .search-bar {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-        }
-        .search-bar input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px 0 0 4px;
-            width: 200px;
-        }
-        .search-bar button {
-            padding: 8px 15px;
-            background-color: #1e5799;
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-        }
-        .action-buttons {
-            margin-bottom: 20px;
-        }
-        .action-button {
-            padding: 5px 10px;
-            margin-right: 10px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .action-button.add {
-            background-color: #5cb85c;
-            color: white;
-            border: none;
-        }
-        .action-button.edit {
-            background-color: #f0ad4e;
-            color: white;
-            border: none;
-        }
-        .action-button.delete {
-            background-color: #d9534f;
-            color: white;
-            border: none;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: white;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f5f5f5;
-        }
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-        .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .actions {
-            white-space: nowrap;
-        }
-        .checkbox-cell {
-            width: 30px;
-            text-align: center;
-        }
-        .id-cell {
-            width: 50px;
-        }
     </style>
 </head>
 <body>
@@ -149,21 +72,18 @@
                     <span style="font-size: 12px; margin-left: 5px;">▼</span> Main
                     </div>
                     <ul id="main-submenu" style="list-style: none; padding-left: 15px; display: none;">
+                        <!-- O-Convener Applications -->
+                        <li onclick="loadContent('{{ url_for('admin.e_admin_applications') }}')">O-Convener Applications</li>
+                        
+                        <!-- System Management -->
                         <li>
-                            <div onclick="toggleSubMenu('user')" style="cursor: pointer;">
-                            <span style="font-size: 12px; margin-left: 5px;" >▼</span> Manage User
+                            <div onclick="toggleSubMenu('system')" style="cursor: pointer;">
+                            <span style="font-size: 12px; margin-left: 5px;">▼</span> System
                             </div>
-                            <ul id="user-submenu" style="list-style: none; padding-left: 15px; display: none;">
-                                <li onclick="loadContent('{{ url_for('admin.e_admin_users_b') }}')">E-Admin</li>
-                            </ul>
-                        </li>
-                        <li>
-                            <div onclick="toggleSubMenu('product')" style="cursor: pointer;">
-                            <span style="font-size: 12px; margin-left: 5px;">▼</span> Question List
-                            </div>
-                            <ul id="product-submenu" style="list-style: none; padding-left: 15px; display: none;">
-                                <li onclick="loadContent('{{ url_for('admin.e_admin_question_a') }}')">Answered</li>
-                                <li onclick="loadContent('{{ url_for('admin.e_admin_question_b') }}')">Not Answered</li>
+                            <ul id="system-submenu" style="list-style: none; padding-left: 15px; display: none;">
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_policies') }}')">Data Sharing Policies</li>
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_logs') }}')">System Logs</li>
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_bank_settings') }}')">Bank Settings</li>
                             </ul>
                         </li>
                     </ul>
@@ -172,7 +92,7 @@
         </div>
 
         <div class="content" id="main-content">
-            <!-- Dynamic content will be displayed here -->
+            <!-- Dynamic content will be loaded here -->
         </div>
     </div>
 
@@ -180,14 +100,12 @@
     function toggleMainMenu() {
         const mainSubmenu = document.getElementById('main-submenu');
         mainSubmenu.style.display = mainSubmenu.style.display === 'none' ? 'block' : 'none';
-        // Save main menu state
         sessionStorage.setItem('mainMenuOpen', mainSubmenu.style.display === 'block');
     }
 
     function toggleSubMenu(menuType) {
         const submenu = document.getElementById(menuType + '-submenu');
         submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
-        // Save sub menu state
         sessionStorage.setItem(menuType + 'SubmenuOpen', submenu.style.display === 'block');
     }
 
@@ -196,7 +114,6 @@
             .then(response => response.text())
             .then(data => {
                 document.getElementById('main-content').innerHTML = data;
-                // Save current URL to sessionStorage
                 sessionStorage.setItem('lastLoadedUrl', url);
             })
             .catch(error => {
@@ -204,7 +121,6 @@
             });
     }
 
-    // Restore all states when the page is loaded
     document.addEventListener('DOMContentLoaded', function() {
         const mainMenuOpen = sessionStorage.getItem('mainMenuOpen') === 'true';
         const mainSubmenu = document.getElementById('main-submenu');
@@ -212,25 +128,18 @@
             mainSubmenu.style.display = 'block';
         }
 
-        // Restore sub menu states
-        const userSubmenuOpen = sessionStorage.getItem('userSubmenuOpen') === 'true';
-        const userSubmenu = document.getElementById('user-submenu');
-        if (userSubmenuOpen) {
-            userSubmenu.style.display = 'block';
+        const submenuOpen = sessionStorage.getItem('system' + 'SubmenuOpen') === 'true';
+        const submenu = document.getElementById('system-submenu');
+        if (submenuOpen && submenu) {
+            submenu.style.display = 'block';
         }
 
-        const productSubmenuOpen = sessionStorage.getItem('productSubmenuOpen') === 'true';
-        const productSubmenu = document.getElementById('product-submenu');
-        if (productSubmenuOpen) {
-            productSubmenu.style.display = 'block';
-        }
-
-        const lastUrl = sessionStorage.getItem('lastLoadedUrl');
-        if (lastUrl) {
-            loadContent(lastUrl);
-        } else {
-            loadContent('{{ url_for('admin.e_admin_main_page') }}');
-        }
+        const content = `
+            <div style="width: 100%; height: 100%; padding: 20px;">
+                <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Welcome to E-Admin Management System</h2>
+                <p style="color: #666; margin-bottom: 20px;">Please use the sidebar menu to navigate through different functions.</p>
+            </div>`;
+        document.getElementById('main-content').innerHTML = content;
     });
 </script>
 </body>

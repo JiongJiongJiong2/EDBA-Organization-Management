@@ -90,6 +90,24 @@ class Application(db.Model):
     proof_material = db.Column(db.String(255), nullable=False)
     status = db.Column(db.Integer, nullable=False)  #0,1,2
     organization_name = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp()) # 后来添加
+
+'''
+created_at字段是用来记录OC申请的提交时间的，它主要用于两个重要功能：
+
+1. 三天处理时限检查
+
+- E-Admin需要在3天内处理OC的注册申请
+- 系统通过比较created_at（申请提交时间）和当前时间来判断是否超过3天
+- 如果超过3天未处理，会显示警告提醒
+
+2. 申请列表排序
+
+- 在admin/views.py中使用created_at来对申请进行排序显示
+- 最新的申请会显示在前面，方便管理员及时处理
+
+'''
+
 
 class Question(db.Model):
     __tablename__ = 'questions'
@@ -110,7 +128,6 @@ class CourseInformation(db.Model):
 
     organization = db.relationship('Organization', backref='courses')
 
-
 class ApplicationDocument(db.Model):
     __tablename__ = 'application_documents'
     id = db.Column(db.Integer, primary_key=True)
@@ -121,19 +138,6 @@ class ApplicationDocument(db.Model):
 
     application = db.relationship('Application', backref='documents')
 
-
-#!=!====================================================================================================================================================
-'''
-class BankAccount(db.Model):
-    __tablename__ = 'bank_accounts'
-    account_id = db.Column(db.Integer, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    balance = db.Column(db.Integer, nullable=True)
-
-    organization = db.relationship('Organization', back_populates='bank_accounts')
-'''
 class BankAccount(db.Model):
     __tablename__ = 'bank_accounts'
     account_id = db.Column(db.Integer, primary_key=True)
@@ -144,4 +148,30 @@ class BankAccount(db.Model):
     password = db.Column(db.String(255), nullable=False)
 
     organization = db.relationship('Organization', back_populates='bank_accounts')
-#======================================================================================================================================================
+
+class Policy(db.Model):
+    __tablename__ = 'policies'
+    policy_id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text)
+    pdf_path = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+class SystemLog(db.Model):
+    __tablename__ = 'system_logs'
+    log_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('members.user_id'))
+    activity_type = db.Column(db.String(50))  # login, logout, service_access
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'))
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    details = db.Column(db.Text)
+
+    user = db.relationship('Member')
+    organization = db.relationship('Organization')
+
+class EDBankAccount(db.Model):
+    __tablename__ = 'ed_bank_accounts'
+    account_id = db.Column(db.Integer, primary_key=True)
+    account_number = db.Column(db.String(50), unique=True, nullable=False)
+    membership_fee = db.Column(db.Numeric(10, 2), nullable=False, default=0)

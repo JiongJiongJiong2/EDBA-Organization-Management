@@ -1,0 +1,92 @@
+<div style="width: 100%; height: 100%; padding: 20px;">
+    <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">System Log</h2>
+    
+    <!-- 筛选表单 -->
+    <div style="margin-bottom: 20px; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
+        <form method="GET" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+            <!-- 活动类型筛选 -->
+            <div>
+                <label style="display: block; margin-bottom: 5px;">Activity Type</label>
+                <select name="activity_type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">All Activities</option>
+                    <option value="login">Login</option>
+                    <option value="logout">Logout</option>
+                    <option value="service_access">Service Access</option>
+                </select>
+            </div>
+
+            <!-- 用户名筛选 -->
+            <div>
+                <label style="display: block; margin-bottom: 5px;">User Email</label>
+                <input type="text" name="user_email" placeholder="Enter user email" value="{{ request.args.get('user_email', '') }}" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <!-- 日期范围筛选 -->
+            <div>
+                <label style="display: block; margin-bottom: 5px;">Date Range</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" name="start_date" value="{{ request.args.get('start_date', '') }}"
+                           style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <input type="date" name="end_date" value="{{ request.args.get('end_date', '') }}"
+                           style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- 组织筛选 -->
+            <div>
+                <label style="display: block; margin-bottom: 5px;">Organization</label>
+                <select name="organization_id" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">All Organizations</option>
+                    {% for org in organizations %}
+                    <option value="{{ org.organization_id }}" {% if request.args.get('organization_id')|int == org.organization_id %}selected{% endif %}>
+                        {{ org.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 筛选按钮 -->
+            <div style="grid-column: span 2; text-align: right;">
+                <button type="submit" style="padding: 8px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 日志表格 -->
+    <div style="background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: #f8f9fa;">
+                <tr>
+                    <th style="padding: 12px; text-align: left;">Time</th>
+                    <th style="padding: 12px; text-align: left;">User</th>
+                    <th style="padding: 12px; text-align: left;">Activity</th>
+                    <th style="padding: 12px; text-align: left;">Organization</th>
+                    <th style="padding: 12px; text-align: left;">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px;">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td style="padding: 12px;">{{ log.user.email }}</td>
+                    <td style="padding: 12px;">{{ log.activity_type }}</td>
+                    <td style="padding: 12px;">{{ log.organization.name }}</td>
+                    <td style="padding: 12px;">{{ log.details }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 导出按钮 -->
+    <div style="margin-top: 20px; text-align: right;">
+        <form method="POST" action="{{ url_for('admin.export_logs') }}" style="display: inline;">
+            <button type="submit" style="padding: 8px 20px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Export Logs
+            </button>
+        </form>
+    </div>
+</div>

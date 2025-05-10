@@ -10,6 +10,7 @@ class Config:
     
     # 上传文件设置
     UPLOAD_FOLDER = os.path.join(basedir, 'instance', 'proof_documents')
+    POLICIES_FOLDER = os.path.join(basedir, 'instance', 'policies')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB上传限制
 
     # 数据库设置
