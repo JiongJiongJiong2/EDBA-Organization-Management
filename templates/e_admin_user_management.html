@@ -127,7 +127,6 @@
         .actions {
             white-space: nowrap;
         }
-
         .checkbox-cell {
             width: 30px;
             text-align: center;
@@ -146,7 +145,7 @@
         <div class="sidebar">
             <ul class="sidebar-menu">
                 <li>
-                    <div onclick="toggleMainMenu(); loadContent('/e_admin/main')" style="cursor: pointer;">
+                    <div onclick="toggleMainMenu(); loadContent('{{ url_for('admin.e_admin_main_page') }}')" style="cursor: pointer;">
                     <span style="font-size: 12px; margin-left: 5px;">▼</span> Main
                     </div>
                     <ul id="main-submenu" style="list-style: none; padding-left: 15px; display: none;">
@@ -155,7 +154,7 @@
                             <span style="font-size: 12px; margin-left: 5px;" >▼</span> Manage User
                             </div>
                             <ul id="user-submenu" style="list-style: none; padding-left: 15px; display: none;">
-                                <li onclick="loadContent('/e_admin/users/b')">E-Admin</li>
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_users_b') }}')">E-Admin</li>
                             </ul>
                         </li>
                         <li>
@@ -163,8 +162,8 @@
                             <span style="font-size: 12px; margin-left: 5px;">▼</span> Question List
                             </div>
                             <ul id="product-submenu" style="list-style: none; padding-left: 15px; display: none;">
-                                <li onclick="loadContent('/e_admin/questions/a')">Answered</li>
-                                <li onclick="loadContent('/e_admin/questions/b')">Not Answered</li>
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_question_a') }}')">Answered</li>
+                                <li onclick="loadContent('{{ url_for('admin.e_admin_question_b') }}')">Not Answered</li>
                             </ul>
                         </li>
                     </ul>
@@ -175,7 +174,6 @@
         <div class="content" id="main-content">
             <!-- Dynamic content will be displayed here -->
         </div>
-
     </div>
 
 <script>
@@ -231,7 +229,7 @@
         if (lastUrl) {
             loadContent(lastUrl);
         } else {
-            loadContent('/e_admin/main');
+            loadContent('{{ url_for('admin.e_admin_main_page') }}');
         }
     });
 </script>

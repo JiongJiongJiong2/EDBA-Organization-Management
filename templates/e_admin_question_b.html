@@ -26,7 +26,7 @@
                     <td style="padding: 12px;">{{ q.sender_id }}</td>
                     <td style="padding: 12px;">{{ q.sender }}</td>
                     <td style="padding: 12px;">
-                        <form method="POST" action="{{ url_for('submit_answer', question_id=q.question_id) }}" id="answer_form_{{ q.question_id }}" style="display: flex; gap: 10px;">
+                        <form method="POST" action="{{ url_for('admin.e_admin_submit_answer', question_id=q.question_id) }}" id="answer_form_{{ q.question_id }}" style="display: flex; gap: 10px;">
                             <input type="text" name="answer" value="{{ q.answer }}" style="flex: 1; padding: 8px;">
                             <button type="submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">Config</button>
                             <button type="button" onclick="document.getElementById('answer_form_{{ q.question_id }}').reset()" style="padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px;">Cancel</button>
