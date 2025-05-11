@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Organization, Service, Question, CourseInformation
+from models import db, Member, Organization, Service, Question, CourseInformation, Application
 
 import requests
 import io
@@ -35,7 +35,7 @@ def dashboard(user_type):
     elif user_type == 'EE':
         return render_template('e_admin_user_management.html', user=member)
     elif user_type == 'SE':
-        return render_template('se_admin_main_page.html', user=member)
+        return render_template('se_admin_user_management.html', user=member)
     elif user_type == 'OC':
         return render_template('oc_workspace_oc-workspace.html', user=member)
     else:
