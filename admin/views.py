@@ -4,7 +4,7 @@ import sqlite3
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Application, ApplicationDocument, Organization, Member, Workspace
+from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, EDBankAccount, Question
 from flask import current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename

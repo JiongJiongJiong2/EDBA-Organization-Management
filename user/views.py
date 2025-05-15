@@ -33,7 +33,7 @@ def dashboard(user_type):
     if user_type == 'TT':
         return render_template('t-admin_main_page.html', user=member)
     elif user_type == 'EE':
-        return render_template('e_admin_user_management.html', user=member)
+        return render_template('e_admin_main.html', user=member)
     elif user_type == 'SE':
         return render_template('se_admin_user_management.html', user=member)
     elif user_type == 'OC':
