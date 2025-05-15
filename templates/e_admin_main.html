@@ -1,30 +1,50 @@
 <div style="width: 100%; height: 100%; padding: 20px;">
-    <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Main Page</h2>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-        
-        <!-- O-Convener申请管理 -->
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #4ECDC4; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_applications') }}')">
-            <h3 style="color: #4ECDC4; margin-bottom: 10px;">O-Convener Applications</h3>
-            <p style="color: #666;">Process registration applications</p>
+    <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">E-Admin Dashboard</h2>
+
+    <div style="display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+        <!-- O-Convener Applications Card -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 15px; color: #333;">O-Convener Applications</h3>
+            <p style="color: #666; margin-bottom: 20px;">Review and process O-Convener registration applications</p>
+            <a href="{{ url_for('admin.e_admin_applications') }}" 
+               style="display: inline-block; padding: 8px 16px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">
+                Manage Applications
+            </a>
         </div>
 
-        <!-- 数据共享政策 -->
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #95DAC1; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_policies') }}')">
-            <h3 style="color: #95DAC1; margin-bottom: 10px;">Data Sharing Policies</h3>
-            <p style="color: #666;">Manage platform data sharing policies</p>
+        <!-- Data Sharing Policies Card -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 15px; color: #333;">Data Sharing Policies</h3>
+            <p style="color: #666; margin-bottom: 20px;">Manage platform data sharing policies and documentation</p>
+            <a href="{{ url_for('admin.e_admin_policies') }}" 
+               style="display: inline-block; padding: 8px 16px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 4px;">
+                Manage Policies
+            </a>
         </div>
 
-        <!-- 系统日志 -->
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #B6B8D6; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_logs') }}')">
-            <h3 style="color: #B6B8D6; margin-bottom: 10px;">System Logs</h3>
-            <p style="color: #666;">View system activity logs</p>
+        <!-- Bank Settings Card -->
+        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 15px; color: #333;">Bank Settings</h3>
+            <p style="color: #666; margin-bottom: 20px;">Configure E-DBA bank account and membership fee settings</p>
+            <a href="{{ url_for('admin.bank_settings') }}" 
+               style="display: inline-block; padding: 8px 16px; background-color: #ff9800; color: white; text-decoration: none; border-radius: 4px;">
+                Manage Settings
+            </a>
         </div>
-
-        <!-- 银行设置 -->
-        <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; border: 3px solid #FFA69E; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-10px)'" onmouseout="this.style.transform='translateY(0)'" onclick="loadContent('{{ url_for('admin.e_admin_bank_settings') }}')">
-            <h3 style="color: #FFA69E; margin-bottom: 10px;">Bank Settings</h3>
-            <p style="color: #666;">Manage bank account and membership fee</p>
-        </div>
-
     </div>
+
+    <!-- System Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="margin-top: 30px;">
+                {% for category, message in messages %}
+                    <div style="padding: 15px; margin-bottom: 10px; border-radius: 4px;
+                              background-color: {% if category == 'success' %}#d4edda{% elif category == 'error' %}#f8d7da{% else %}#fff3cd{% endif %};
+                              color: {% if category == 'success' %}#155724{% elif category == 'error' %}#721c24{% else %}#856404{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 </div>
