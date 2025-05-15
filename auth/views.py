@@ -33,6 +33,7 @@ def send_verification_code():
         return jsonify({'status': 'error', 'message': '请等待60秒后再发送验证码'}), 429
 
     code = generate_verification_code()
+    print(f"[Registration] Verification code: {code}")  # Debug output
     session['verification_code_register'] = code
     session['email_pending_register'] = email
     session['last_code_sent_time_register'] = datetime.now().timestamp()
@@ -160,6 +161,7 @@ def login():
                 return redirect(url_for('auth.login'))
 
             code = generate_verification_code()
+            print(f"[Login] Verification code: {code}")  # Debug output
             session['verification_code'] = code
             session['email_pending'] = email
             session['last_code_sent_time_login'] = datetime.now().timestamp()

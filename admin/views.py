@@ -111,28 +111,35 @@ def se_admin_approve_application(app_id):
         return redirect(url_for('admin.se_admin_applications'))
         
     try:
-        # Create organization
+        # Create organization with initial settings
         organization = Organization(name=application.organization_name)
         db.session.add(organization)
         db.session.flush()  # Get organization_id
         
-        # Create workspace
+        # Create workspace with detailed settings
         workspace = Workspace(
             organization_id=organization.organization_id,
-            name=f"{application.organization_name}'s Workspace"
+            name=f"{application.organization_name}'s Workspace",
+            status='active',
+            settings=json.dumps({
+                'created_by': session.get('user_id'),
+                'created_at': datetime.now().isoformat(),
+                'initial_setup_complete': True
+            })
         )
         db.session.add(workspace)
         db.session.flush()
         
-        # Create O-Convener member
+        # Create O-Convener member with initial fund
         member = Member(
             email=application.email,
             user_type='OC',
-            organization_id=organization.organization_id
+            organization_id=organization.organization_id,
+            fund=50  # Initial fund amount
         )
         db.session.add(member)
         
-        # Update application
+        # Update application with detailed tracking
         application.status = 3  # se_admin_approved
         application.se_admin_review_date = datetime.now()
         application.se_admin_notes = request.form.get('notes')
@@ -140,17 +147,32 @@ def se_admin_approve_application(app_id):
         
         db.session.commit()
         
-        # Send notification email to O-Convener
+        # Send detailed notification email to O-Convener
         send_email(
             to=application.email,
             subject='Your O-Convener Application Has Been Approved',
-            body=f'Congratulations! Your application to become an O-Convener has been approved.\n\n'
-                 f'Organization: {application.organization_name}\n'
-                 f'You can now log in to the E-DBA system using your email address.\n\n'
-                 f'Welcome to the E-DBA system!'
+            body=f'''Congratulations! Your application to become an O-Convener has been approved.
+
+Organization Details:
+- Name: {application.organization_name}
+- Workspace ID: {workspace.workspace_id}
+- Initial Fund: 50 credits
+
+You can now log in to the E-DBA system using your email address: {application.email}
+
+Important Next Steps:
+1. Log in to your account
+2. Complete your organization profile
+3. Review the workspace settings
+4. Set up your services
+
+Welcome to the E-DBA system!
+
+Best regards,
+The E-DBA Team'''
         )
         
-        flash('Application approved successfully', 'success')
+        flash('Application approved successfully. Workspace created and O-Convener notified.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error approving application: {str(e)}', 'error')
@@ -169,24 +191,36 @@ def se_admin_reject_application(app_id):
         return redirect(url_for('admin.se_admin_applications'))
     
     try:
-        # Update application
+        # Update application with rejection details
         application.status = 4  # se_admin_rejected
         application.se_admin_review_date = datetime.now()
-        application.se_admin_notes = request.form.get('notes')
+        rejection_notes = request.form.get('notes')
+        application.se_admin_notes = rejection_notes
         
         db.session.commit()
         
-        # Send notification email to O-Convener
+        # Send detailed rejection email to O-Convener
         send_email(
             to=application.email,
             subject='Your O-Convener Application Status',
-            body=f'We regret to inform you that your application to become an O-Convener has been rejected.\n\n'
-                 f'Organization: {application.organization_name}\n'
-                 f'Notes: {application.se_admin_notes}\n\n'
-                 f'If you have any questions, please contact support.'
+            body=f'''We regret to inform you that your application to become an O-Convener has been rejected.
+
+Application Details:
+- Organization: {application.organization_name}
+- Submitted: {application.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+- Reviewed by E-Admin: {application.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S')}
+- Final Review: {application.se_admin_review_date.strftime('%Y-%m-%d %H:%M:%S')}
+
+Reason for Rejection:
+{rejection_notes}
+
+If you would like to appeal this decision or need further clarification, please contact our support team with your application ID: {application.application_id}
+
+Best regards,
+The E-DBA Team'''
         )
         
-        flash('Application rejected successfully', 'success')
+        flash('Application rejected and detailed notification sent to applicant', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error rejecting application: {str(e)}', 'error')
@@ -464,12 +498,16 @@ def approve_application(app_id):
         return redirect(url_for('admin.e_admin_applications'))
     
     try:
-        # Update application status
+        # Update application status with timing information
         application.status = 1  # e_admin_approved
         application.e_admin_approval_date = datetime.now()
+        
+        # Calculate time taken for E-Admin review
+        review_time = application.e_admin_approval_date - application.created_at
+        
         db.session.commit()
         
-        # Send notification to Senior E-Admin
+        # Prepare detailed notification for Senior E-Admin
         senior_admins = db.session.execute(
             db.select(Member).filter_by(user_type='SE')
         ).scalars().all()
@@ -477,15 +515,33 @@ def approve_application(app_id):
         for admin in senior_admins:
             send_email(
                 to=admin.email,
-                subject='New O-Convener Application Approval',
-                body=f'A new O-Convener application has been approved.\n\n'
-                     f'Organization: {application.organization_name}\n'
-                     f'Applicant Email: {application.email}\n'
-                     f'Approved Date: {application.e_admin_approval_date}\n\n'
-                     f'Please review this application.'
+                subject='New O-Convener Application Requires Your Review',
+                body=f'''An O-Convener application has been approved and requires your review.
+
+Application Details:
+- Organization: {application.organization_name}
+- Applicant Email: {application.email}
+- Submission Date: {application.created_at.strftime('%Y-%m-%d %H:%M:%S')}
+- E-Admin Approval Date: {application.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S')}
+- Review Time: {review_time.days} days, {review_time.seconds//3600} hours
+- Application ID: {application.application_id}
+
+Supporting Documents:
+{chr(10).join(f"- {doc.original_filename}" for doc in application.documents)}
+
+Please review this application through your SE-Admin dashboard.
+A workspace will be created upon your approval.
+
+Action Required:
+1. Review application details
+2. Check supporting documents
+3. Make final approval decision
+
+Access the application at: {request.host_url}se_admin/applications
+'''
             )
         
-        flash('Application approved and Senior E-Admin notified', 'success')
+        flash('Application approved and detailed notification sent to Senior E-Admin', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error approving application: {str(e)}', 'error')

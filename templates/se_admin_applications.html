@@ -1,14 +1,13 @@
 <div style="width: 100%; height: 100%; padding: 20px;">
-    <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">O-Convener Applications</h2>
+    <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">O-Convener Applications Review</h2>
+    <p style="margin-bottom: 15px; color: #666;">
+        Applications approved by E-Admin awaiting final review. Please carefully review each application and associated documents before making a decision.
+    </p>
     
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }}" style="margin-bottom: 20px; padding: 10px; border-radius: 4px; 
-                    {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
-                    {% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
-                    {% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
-                    {% endif %}">
+                <div class="alert alert-{{ category }}" style="margin-bottom: 20px; padding: 10px; border-radius: 4px; {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;{% endif %}">
                     {{ message }}
                 </div>
             {% endfor %}
@@ -32,7 +31,9 @@
                     <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">ID</th>
                     <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Organization</th>
                     <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Applicant Email</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">E-Admin Approval Date</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Submission Date</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">E-Admin Review</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Review Time</th>
                     <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Documents</th>
                     <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Actions</th>
                 </tr>
@@ -40,11 +41,24 @@
             <tbody>
                 {% for app in applications %}
                 <tr>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">{{ app.application_id }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">{{ app.organization_name }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">{{ app.email }}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">#{{ app.application_id }}</td>
+                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
+                        <strong>{{ app.organization_name }}</strong>
+                    </td>
+                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
+                        <a href="mailto:{{ app.email }}" style="color: #007bff; text-decoration: none;">
+                            {{ app.email }}
+                        </a>
+                    </td>
+                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
+                        {{ app.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </td>
                     <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
                         {{ app.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </td>
+                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
+                        {% set review_time = app.e_admin_approval_date - app.created_at %}
+                        {{ review_time.days }} days, {{ (review_time.seconds//3600) }} hours
                     </td>
                     <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
                         {% for doc in app.documents %}
@@ -55,12 +69,12 @@
                         {% endfor %}
                     </td>
                     <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        <button onclick="showActionModal({{ app.application_id }}, 'approve')"
+                    <button onclick="showActionModal({{ app.application_id }}, 'approve', event)"
                                 style="padding: 6px 12px; margin-right: 5px; background-color: #28a745; color: white; 
                                        border: none; border-radius: 4px; cursor: pointer;">
                             Approve
                         </button>
-                        <button onclick="showActionModal({{ app.application_id }}, 'reject')"
+                        <button onclick="showActionModal({{ app.application_id }}, 'reject', event)"
                                 style="padding: 6px 12px; background-color: #dc3545; color: white; 
                                        border: none; border-radius: 4px; cursor: pointer;">
                             Reject
@@ -80,10 +94,24 @@
                 background-color: white; padding: 20px; border-radius: 8px; width: 500px;">
         <h3 id="modalTitle" style="margin-top: 0; margin-bottom: 20px;"></h3>
         <form id="actionForm" method="POST">
-            <div style="margin-bottom: 15px;">
-                <label for="notes" style="display: block; margin-bottom: 5px;">Notes:</label>
-                <textarea id="notes" name="notes" rows="4" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                          placeholder="Enter any additional notes..."></textarea>
+            <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Application Review</label>
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                        <p><strong>Organization Name:</strong> <span id="modalOrgName"></span></p>
+                        <p><strong>Applicant Email:</strong> <span id="modalEmail"></span></p>
+                        <p><strong>Submission Date:</strong> <span id="modalSubmissionDate"></span></p>
+                        <p><strong>E-Admin Review Date:</strong> <span id="modalReviewDate"></span></p>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label for="notes" style="display: block; margin-bottom: 5px; font-weight: bold;">Review Notes:</label>
+                    <textarea id="notes" name="notes" rows="4" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                              placeholder="Enter your review notes and any specific instructions or concerns..."></textarea>
+                </div>
+                <div id="workspaceSection" style="display: none; background-color: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <p style="margin: 0; font-weight: bold; color: #2e7d32;">A workspace will be created for this organization upon approval.</p>
+                </div>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button type="button" onclick="closeModal()"
@@ -100,13 +128,30 @@
 </div>
 
 <script>
-function showActionModal(applicationId, action) {
+function showActionModal(applicationId, action, event) {
     const modal = document.getElementById('actionModal');
     const modalTitle = document.getElementById('modalTitle');
+    const modalOrgName = document.getElementById('modalOrgName');
+    const modalEmail = document.getElementById('modalEmail');
+    const modalSubmissionDate = document.getElementById('modalSubmissionDate');
+    const modalReviewDate = document.getElementById('modalReviewDate');
+    const workspaceSection = document.getElementById('workspaceSection');
     const actionForm = document.getElementById('actionForm');
     const submitButton = actionForm.querySelector('button[type="submit"]');
 
-    modalTitle.textContent = action === 'approve' ? 'Approve Application' : 'Reject Application';
+    // Get application data from the table row
+    const row = event.target.closest('tr');
+    if (row) {
+        modalOrgName.textContent = row.cells[1].querySelector('strong').textContent;
+        modalEmail.textContent = row.cells[2].querySelector('a').textContent;
+        modalSubmissionDate.textContent = row.cells[3].textContent.trim();
+        modalReviewDate.textContent = row.cells[4].textContent.trim();
+    }
+
+    modalTitle.textContent = action === 'approve' ? 'Approve O-Convener Application' : 'Reject O-Convener Application';
+    
+    // Show workspace section only for approval
+    workspaceSection.style.display = action === 'approve' ? 'block' : 'none';
     actionForm.action = `/se_admin/applications/${applicationId}/${action}`;
     submitButton.style.backgroundColor = action === 'approve' ? '#28a745' : '#dc3545';
     submitButton.textContent = action === 'approve' ? 'Approve' : 'Reject';
