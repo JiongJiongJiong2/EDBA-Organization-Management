@@ -48,6 +48,37 @@ def send_verification_code():
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Email sending failed: {e}'}), 500
 
+# Application status check
+@auth_bp.route('/application/status', methods=['GET', 'POST'])
+def check_application_status():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        application = db.session.execute(
+            db.select(Application).filter_by(email=email)
+            .order_by(Application.created_at.desc())
+        ).scalar_one_or_none()
+        
+        if application:
+            status_messages = {
+                0: 'Pending E-Admin Review',
+                1: 'E-Admin Approved - Awaiting SE-Admin Review',
+                2: 'E-Admin Rejected',
+                3: 'SE-Admin Approved',
+                4: 'SE-Admin Rejected'
+            }
+            
+            status_details = {
+                'status': status_messages.get(application.status, 'Unknown'),
+                'application_date': application.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'e_admin_date': application.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') if application.e_admin_approval_date else None,
+                'se_admin_date': application.se_admin_review_date.strftime('%Y-%m-%d %H:%M:%S') if application.se_admin_review_date else None,
+                'organization': application.organization_name
+            }
+            return jsonify(status_details)
+        return jsonify({'error': 'No application found for this email'}), 404
+        
+    return render_template('check_application_status.html')
+
 # O-Convener注册页面
 @auth_bp.route('/register/oconvener', methods=['GET', 'POST'])
 def register_oconvener():
@@ -189,11 +220,22 @@ def login():
                     flash('该用户不存在，请联系组织召集人', 'danger')
                     return redirect(url_for('auth.login'))
 
+                # 输出调试信息
+                print(f"User login - Email: {email}, Type: {member.user_type}")
+                
+                # 检查用户类型并标准化
+                if member.user_type.upper() in ['SE', 'SE-ADMIN']:
+                    session['user_type'] = 'SE'
+                elif member.user_type.upper() in ['EE', 'E-ADMIN']:
+                    session['user_type'] = 'EE'
+                else:
+                    session['user_type'] = member.user_type
+                    
                 session['user_id'] = member.user_id
-                session['user_type'] = member.user_type
                 session['organization_id'] = member.organization_id
                 flash('登录成功', 'success')
-                return redirect(url_for('user.dashboard', user_type=member.user_type))
+                print(f"Session user_type set to: {session['user_type']}")  # 调试信息
+                return redirect(url_for('user.dashboard', user_type=session['user_type']))
             else:
                 flash('验证码错误或邮箱不一致，请重试', 'warning')
 

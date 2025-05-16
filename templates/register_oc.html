@@ -4,19 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O-Convener 注册</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> {# 假设存在一个 style.css 文件 #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* 简单的样式，后续可以完善 */
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: #f5f5f5;
         }
         .container {
             max-width: 600px;
             margin: auto;
             padding: 20px;
-            border: 1px solid #ccc;
+            background-color: white;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .form-group {
             margin-bottom: 15px;
@@ -25,12 +26,14 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            color: #333;
         }
         input[type="text"], input[type="email"], input[type="file"] {
-            width: calc(100% - 22px); /* Adjust for padding and border */
+            width: calc(100% - 22px);
             padding: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 14px;
         }
         button {
             padding: 10px 15px;
@@ -52,11 +55,83 @@
         .file-item {
             margin-bottom: 5px;
         }
+        .process-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .process-info h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        .process-info ol {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+        .process-info li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        .footer-links {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .footer-links a {
+            margin: 0 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        .flashes {
+            padding: 0;
+            list-style: none;
+        }
+        .flashes li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .flashes .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .flashes .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .flashes .danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .pdf-notice {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>O-Convener 注册</h2>
+        
+        <div class="process-info">
+            <h4>注册流程说明</h4>
+            <ol>
+                <li>提交注册申请和必要的证明文件（仅支持PDF格式）</li>
+                <li>E-Admin将在3天内审核您的申请</li>
+                <li>如果E-Admin批准，申请将转交给Senior E-Admin进行最终审核</li>
+                <li>审核结果将通过邮件通知您</li>
+                <li>如果获得批准，您将收到登录凭证和工作空间信息</li>
+            </ol>
+        </div>
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="flashes">
@@ -66,6 +141,7 @@
                 </ul>
             {% endif %}
         {% endwith %}
+
         <form action="{{ url_for('auth.register_oconvener') }}" method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="email">邮箱:</label>
@@ -77,67 +153,109 @@
             </div>
             <div class="form-group">
                 <label for="proof_document">证明材料:</label>
-                <input type="file" id="proof_document" name="proof_document" multiple> {# 允许上传多个文件 #}
+                <input type="file" id="proof_document" name="proof_document" accept=".pdf" required>
+                <div class="pdf-notice">
+                    * 仅支持PDF格式文件，大小不超过5MB
+                </div>
                 <div class="file-list">
                     <p>已选择文件:</p>
-                    {# 这里可以使用 JavaScript 显示已选择的文件 #}
                     <ul id="selected-files"></ul>
                 </div>
             </div>
-            {# 验证码部分，可以复用登录页面的逻辑，这里先占位 #}
             <div class="form-group">
                 <label for="code">验证码:</label>
-                <input type="text" id="code" name="code" required>
-                <button type="button" id="send-code-btn">发送验证码</button> {# 需要 JavaScript 实现发送验证码功能 #}
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="code" name="code" required style="flex: 1;">
+                    <button type="button" id="send-code-btn" style="width: 120px;">发送验证码</button>
+                </div>
             </div>
 
-            <button type="submit">提交申请</button>
+            <button type="submit" style="width: 100%;">提交申请</button>
         </form>
-        <p><a href="{{ url_for('auth.login') }}">返回登录</a></p>
+
+        <div class="footer-links">
+            <a href="{{ url_for('auth.login') }}">返回登录</a>
+            <a href="{{ url_for('auth.check_application_status') }}">查看申请状态</a>
+        </div>
     </div>
 
     <script>
-        // JavaScript for displaying selected files and sending verification code
         const fileInput = document.getElementById('proof_document');
         const selectedFilesList = document.getElementById('selected-files');
 
         fileInput.addEventListener('change', function() {
-            selectedFilesList.innerHTML = ''; // Clear previous list
+            selectedFilesList.innerHTML = '';
             for (const file of fileInput.files) {
+                // Check file type
+                if (!file.type.match('application/pdf')) {
+                    alert('请上传PDF格式的文件');
+                    fileInput.value = '';
+                    return;
+                }
+                
+                // Check file size (5MB limit)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('文件大小不能超过5MB');
+                    fileInput.value = '';
+                    return;
+                }
+
                 const listItem = document.createElement('li');
                 listItem.textContent = file.name;
                 selectedFilesList.appendChild(listItem);
             }
         });
 
-        // TODO: Implement send verification code functionality using AJAX
         const sendCodeBtn = document.getElementById('send-code-btn');
+        let cooldown = 60;
+        let timer = null;
+
+        function startCooldown() {
+            sendCodeBtn.disabled = true;
+            timer = setInterval(() => {
+                cooldown--;
+                sendCodeBtn.textContent = `${cooldown}秒后重试`;
+                if (cooldown <= 0) {
+                    clearInterval(timer);
+                    sendCodeBtn.disabled = false;
+                    sendCodeBtn.textContent = '发送验证码';
+                    cooldown = 60;
+                }
+            }, 1000);
+        }
+
         sendCodeBtn.addEventListener('click', function() {
             const email = document.getElementById('email').value;
-            if (email) {
-                // Send AJAX request to a new endpoint to send verification code
-                fetch('{{ url_for("auth.send_verification_code") }}', { // Need to create this endpoint
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: email }),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert('验证码已发送，请查收邮件。');
-                    } else {
-                        alert('发送验证码失败: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('发送验证码时发生错误。');
-                });
-            } else {
-                alert('请输入邮箱地址。');
+            if (!email) {
+                alert('请输入邮箱地址');
+                return;
             }
+
+            if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                alert('请输入有效的邮箱地址');
+                return;
+            }
+
+            fetch('{{ url_for("auth.send_verification_code") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('验证码已发送，请查收邮件');
+                    startCooldown();
+                } else {
+                    alert('发送验证码失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('发送验证码时发生错误');
+            });
         });
     </script>
 </body>

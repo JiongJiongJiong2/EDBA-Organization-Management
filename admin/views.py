@@ -37,15 +37,31 @@ def send_email(to, subject, body):
 # SE Admin Routes
 @admin_bp.route('/se_admin/main')
 def se_admin_main():
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"Current user type: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        print(f"Access denied for user type: {user_type}")  # Debug log
         return redirect(url_for('auth.login'))
     return render_template('se_admin_user_management.html')
 
 @admin_bp.route('/se_admin/dashboard')
 def se_admin_dashboard():
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"Current user type: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        print(f"Access denied for user type: {user_type}")  # Debug log
         return redirect(url_for('auth.login'))
     
     # Get count of pending applications for display
@@ -58,8 +74,16 @@ def se_admin_dashboard():
 
 @admin_bp.route('/se_admin/applications')
 def se_admin_applications():
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"Current user type for applications: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        print(f"Access denied for user type: {user_type}")  # Debug log
         return redirect(url_for('auth.login'))
     
     search_query = request.args.get('search', '')
@@ -83,31 +107,66 @@ def se_admin_applications():
 
 @admin_bp.route('/se_admin/document/<int:doc_id>')
 def download_document(doc_id):
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    print(f"Attempting to download document {doc_id}")  # Debug log
+    
+    if 'user_id' not in session:
+        print("No user session")  # Debug log
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"User type attempting document download: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        print(f"Access denied for user type: {user_type}")  # Debug log
+        flash('没有权限下载文件', 'error')
         return redirect(url_for('auth.login'))
     
     document = db.session.get(ApplicationDocument, doc_id)
     if not document:
+        print(f"Document {doc_id} not found")  # Debug log
         flash('Document not found', 'error')
         return redirect(url_for('admin.se_admin_applications'))
 
-    return send_from_directory(
-        current_app.config['UPLOAD_FOLDER'],
-        document.filename,
-        as_attachment=True,
-        download_name=document.original_filename
-    )
+    try:
+        print(f"Sending file: {document.file_path}")  # Debug log
+        return send_from_directory(
+            current_app.config['UPLOAD_FOLDER'],
+            os.path.basename(document.file_path),  # 使用文件路径的基本名称
+            as_attachment=True,
+            download_name=document.original_filename
+        )
+    except Exception as e:
+        print(f"Error sending file: {str(e)}")  # Debug log
+        flash('Error downloading document', 'error')
+        return redirect(url_for('admin.se_admin_applications'))
 
 @admin_bp.route('/se_admin/applications/<int:app_id>/approve', methods=['POST'])
 def se_admin_approve_application(app_id):
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    print(f"Processing approval request for application {app_id}")  # Debug log
+    
+    if 'user_id' not in session:
+        print("No user session")  # Debug log
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"User type attempting approval: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        print(f"Access denied for user type: {user_type}")  # Debug log
+        flash('没有权限审批申请', 'error')
         return redirect(url_for('auth.login'))
     
     application = db.session.get(Application, app_id)
-    if not application or application.status != 1:  # Must be e_admin_approved
+    if not application:
+        print(f"Application {app_id} not found")  # Debug log
         flash('Invalid application', 'error')
+        return redirect(url_for('admin.se_admin_applications'))
+        
+    if application.status != 1:
+        print(f"Invalid application status: {application.status}")  # Debug log
+        flash('Invalid application status', 'error')
         return redirect(url_for('admin.se_admin_applications'))
         
     try:
@@ -181,13 +240,30 @@ The E-DBA Team'''
 
 @admin_bp.route('/se_admin/applications/<int:app_id>/reject', methods=['POST'])
 def se_admin_reject_application(app_id):
-    if 'user_id' not in session or session.get('user_type') != 'SE':
-        flash('Unauthorized access', 'error')
+    print(f"Processing rejection request for application {app_id}")  # Debug log
+    
+    if 'user_id' not in session:
+        print("No user session")  # Debug log
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    print(f"User type attempting rejection: {user_type}")  # Debug log
+    
+    if user_type not in ['SE', 'SE-ADMIN']:
+        print(f"Access denied for user type: {user_type}")  # Debug log
+        flash('没有权限拒绝申请', 'error')
         return redirect(url_for('auth.login'))
     
     application = db.session.get(Application, app_id)
-    if not application or application.status != 1:  # Must be e_admin_approved
+    if not application:
+        print(f"Application {app_id} not found")  # Debug log
         flash('Invalid application', 'error')
+        return redirect(url_for('admin.se_admin_applications'))
+        
+    if application.status != 1:
+        print(f"Invalid application status: {application.status}")  # Debug log
+        flash('Application must be E-Admin approved first', 'error')
         return redirect(url_for('admin.se_admin_applications'))
     
     try:
@@ -484,7 +560,8 @@ def e_admin_applications():
     
     return render_template('e_admin_applications.html', 
                          applications=applications,
-                         now=datetime.now())
+                         now=datetime.now(),
+                         timedelta=timedelta)
 
 @admin_bp.route('/e_admin/applications/<int:app_id>/approve', methods=['POST'])
 def approve_application(app_id):

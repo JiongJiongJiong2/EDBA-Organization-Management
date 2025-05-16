@@ -152,7 +152,25 @@ function showActionModal(applicationId, action, event) {
     
     // Show workspace section only for approval
     workspaceSection.style.display = action === 'approve' ? 'block' : 'none';
-    actionForm.action = `/se_admin/applications/${applicationId}/${action}`;
+    
+    try {
+        // Set the correct form action URL using Flask's url_for
+        let baseApproveUrl = "{{ url_for('admin.se_admin_approve_application', app_id=0) }}";
+        let baseRejectUrl = "{{ url_for('admin.se_admin_reject_application', app_id=0) }}";
+        
+        // Replace the app_id placeholder in the URL
+        if (action === 'approve') {
+            actionForm.action = baseApproveUrl.replace('0', applicationId);
+            console.log('Setting approve URL:', actionForm.action);
+        } else {
+            actionForm.action = baseRejectUrl.replace('0', applicationId);
+            console.log('Setting reject URL:', actionForm.action);
+        }
+    } catch (error) {
+        console.error('Error setting form action:', error);
+        alert('Error setting up the form. Please refresh the page and try again.');
+    }
+    
     submitButton.style.backgroundColor = action === 'approve' ? '#28a745' : '#dc3545';
     submitButton.textContent = action === 'approve' ? 'Approve' : 'Reject';
 
