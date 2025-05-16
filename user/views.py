@@ -695,10 +695,79 @@ def provide_course_info():
             db.session.add(new_course)
             db.session.commit()
             flash('Course information has been successfully added', 'success')
-            return redirect(url_for('user.dashboard', user_type=user.user_type))
+            return redirect(url_for('user.provide_course_info'))
         except Exception as e:
             db.session.rollback()
             flash(f'Failed to add course information: {str(e)}', 'error')
             return redirect(url_for('user.provide_course_info'))
+
+    # Get all courses for the user's organization
+    courses = db.session.execute(
+        db.select(CourseInformation)
+        .filter_by(organization_id=user.organization_id)
+        .order_by(CourseInformation.name)
+    ).scalars().all()
     
-    return render_template('provide_course_info.html')
+    return render_template('provide_course_info.html', courses=courses)
+
+@user_bp.route('/edit-course/<int:course_id>', methods=['POST'])
+def edit_course(course_id):
+    """Edit an existing course"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can edit course information', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    course = db.session.get(CourseInformation, course_id)
+    if not course or course.organization_id != user.organization_id:
+        flash('Course not found or you do not have permission to edit it', 'error')
+        return redirect(url_for('user.provide_course_info'))
+    
+    course_name = request.form.get('course_name')
+    course_description = request.form.get('course_description')
+    
+    if not course_name:
+        flash('Course name is required', 'error')
+        return redirect(url_for('user.provide_course_info'))
+    
+    try:
+        course.name = course_name
+        course.description = course_description
+        db.session.commit()
+        flash('Course information has been successfully updated', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Failed to update course information: {str(e)}', 'error')
+    
+    return redirect(url_for('user.provide_course_info'))
+
+@user_bp.route('/delete-course/<int:course_id>', methods=['POST'])
+def delete_course(course_id):
+    """Delete a course"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can delete course information', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    course = db.session.get(CourseInformation, course_id)
+    if not course or course.organization_id != user.organization_id:
+        flash('Course not found or you do not have permission to delete it', 'error')
+        return redirect(url_for('user.provide_course_info'))
+    
+    try:
+        db.session.delete(course)
+        db.session.commit()
+        flash('Course has been successfully deleted', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Failed to delete course: {str(e)}', 'error')
+    
+    return redirect(url_for('user.provide_course_info'))
