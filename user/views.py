@@ -87,7 +87,20 @@ def organization_list_student(service_type):
     if not user:
         flash('User information not found', 'error')
         return redirect(url_for('auth.login'))
+
+    # For OC users, show member management interface
+    if user.user_type == 'OC':
+        members = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=user.organization_id)
+            .order_by(Member.user_type)
+        ).scalars().all()
+        return render_template('organization_list_student.html',
+                             user=user,
+                             members=members,
+                             service_type='S')
     
+    # For other users, show organization list
     if request.method == 'POST':
         organization_id = request.form.get('organization_id')
         if organization_id:

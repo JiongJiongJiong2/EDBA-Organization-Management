@@ -3,11 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <title>Organization List</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .fund-input {
+            width: 80px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <h2>Organizations list</h2>
     <p>Welcome, {{ user.email }}!</p><br><br>
-    {% if organizations %}
+    
+    {% if user.user_type == 'OC' and members %}
+        <div class="add-member-form" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <h3>Add New Member</h3>
+            <form action="{{ url_for('oconvener.add_member') }}" method="post">
+                <div style="margin-bottom: 10px;">
+                    <input type="email" name="email" placeholder="Member Email" required style="padding: 5px; width: 200px;">
+                    <select name="user_type" required style="padding: 5px;">
+                        <option value="PP">Data Provider</option>
+                        <option value="PC">Public Data Consumer</option>
+                        <option value="CC">Private Data Consumer</option>
+                    </select>
+                    <button type="submit" style="padding: 5px 10px;">Add Member</button>
+                </div>
+            </form>
+        </div>
+
+        <h3>Manage Organization Members</h3>
+        <table>
+            <tr>
+                <th>Email</th>
+                <th>User Type</th>
+                <th>Fund</th>
+                <th>Actions</th>
+            </tr>
+            {% for member in members %}
+            <tr>
+                <td>{{ member.email }}</td>
+                <td>{{ member.user_type }}</td>
+                <td>
+                    <form action="{{ url_for('oconvener.update_member_fund', member_id=member.user_id) }}" method="post" style="display: inline;">
+                        <input type="number" name="fund" value="{{ member.fund }}" min="0" class="fund-input">
+                        <button type="submit" style="padding: 2px 5px;">Update Fund</button>
+                    </form>
+                </td>
+                <td>
+                    <button onclick="openEditModal('{{ member.user_id }}', '{{ member.email }}', '{{ member.user_type }}')" style="padding: 2px 5px; margin-right: 5px;">Edit</button>
+                    <form action="{{ url_for('oconvener.delete_member', member_id=member.user_id) }}" method="post" style="display:inline;">
+                        <button type="submit" onclick="return confirm('Are you sure you want to delete this member?')" style="padding: 2px 5px;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <!-- Edit Member Modal -->
+        <div id="editMemberModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                       background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h3>Edit Member</h3>
+            <form id="editMemberForm" method="post">
+                <div style="margin-bottom: 10px;">
+                    <input type="email" name="email" id="editEmail" required style="padding: 5px; width: 200px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <select name="user_type" id="editUserType" required style="padding: 5px;">
+                        <option value="PP">Data Provider</option>
+                        <option value="PC">Public Data Consumer</option>
+                        <option value="CC">Private Data Consumer</option>
+                    </select>
+                </div>
+                <button type="submit" style="padding: 5px 10px;">Save Changes</button>
+                <button type="button" onclick="closeEditModal()" style="padding: 5px 10px;">Cancel</button>
+            </form>
+        </div>
+
+        <script>
+            function openEditModal(memberId, email, userType) {
+                document.getElementById('editMemberModal').style.display = 'block';
+                document.getElementById('editEmail').value = email;
+                document.getElementById('editUserType').value = userType;
+                document.getElementById('editMemberForm').action = '/oconvener/edit-member/' + memberId;
+            }
+
+            function closeEditModal() {
+                document.getElementById('editMemberModal').style.display = 'none';
+            }
+        </script>
+    {% elif organizations %}
         {% for org in organizations %}
             <div style="margin: 10px 0;">
                 {{ org.name }}

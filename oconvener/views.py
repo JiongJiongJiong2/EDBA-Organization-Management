@@ -121,28 +121,7 @@ def list_a():
     if 'user_id' not in session:
         flash('Please login first', 'warning')
         return redirect(url_for('auth.login'))
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM members")
-        rows = cursor.fetchall()
-        conn.close()
-
-        table_html = "<h2>Member list</h2><table border='1'><tr>"
-        col_names = [description[0] for description in cursor.description]
-        for col in col_names:
-            table_html += f"<th>{col}</th>"
-        table_html += "</tr>"
-
-        for row in rows:
-            table_html += "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
-        table_html += "</table>"
-
-        return table_html
-
-    except Exception as e:
-        return f"<h2>Error reading member data: {e}</h2>"
+    return redirect(url_for('user.organization_list_student', service_type='S'))
 
 @oconvener_bp.route('/information/a')
 def information_a():
@@ -380,6 +359,166 @@ def question_a():
             return jsonify({'success': False, 'message': f'Submission failed: {str(e)}'})
     
     return render_template('o-convener_question_a.html')
+
+@oconvener_bp.route('/update-member-fund/<int:member_id>', methods=['POST'])
+def update_member_fund(member_id):
+    """Update member fund by O-Convener"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        flash('Only O-Conveners can manage member funds', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    member = db.session.get(Member, member_id)
+    if not member or member.organization_id != oc.organization_id:
+        flash('Member not found in your organization', 'error')
+        return redirect(url_for('user.organization_list_student', service_type='S'))
+    
+    try:
+        new_fund = int(request.form.get('fund', 0))
+        if new_fund < 0:
+            flash('Fund value cannot be negative', 'error')
+        else:
+            member.fund = new_fund
+            db.session.commit()
+            flash('Member fund updated successfully', 'success')
+    except ValueError:
+        flash('Invalid fund value', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating member fund: {str(e)}', 'error')
+    
+    return redirect(url_for('user.organization_list_student', service_type='S'))
+
+@oconvener_bp.route('/add-member', methods=['POST'])
+def add_member():
+    """Add new member to organization by O-Convener"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        flash('Only O-Conveners can add members', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    try:
+        email = request.form.get('email')
+        user_type = request.form.get('user_type')
+        
+        # Validate user type
+        if user_type not in ['PP', 'PC', 'CC']:
+            flash('Invalid user type', 'error')
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        # Check if email already exists
+        existing_member = db.session.execute(
+            db.select(Member).filter_by(email=email)
+        ).scalar_one_or_none()
+        
+        if existing_member:
+            flash('A member with this email already exists', 'error')
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        # Create new member
+        new_member = Member(
+            email=email,
+            user_type=user_type,
+            organization_id=oc.organization_id,
+            fund=0  # Initial fund value
+        )
+        db.session.add(new_member)
+        db.session.commit()
+        flash('New member added successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding member: {str(e)}', 'error')
+    
+    return redirect(url_for('user.organization_list_student', service_type='S'))
+
+@oconvener_bp.route('/edit-member/<int:member_id>', methods=['POST'])
+def edit_member(member_id):
+    """Edit member details by O-Convener"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        flash('Only O-Conveners can edit members', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    member = db.session.get(Member, member_id)
+    if not member or member.organization_id != oc.organization_id:
+        flash('Member not found in your organization', 'error')
+        return redirect(url_for('user.organization_list_student', service_type='S'))
+    
+    try:
+        email = request.form.get('email')
+        user_type = request.form.get('user_type')
+        
+        # Validate user type
+        if user_type not in ['PP', 'PC', 'CC']:
+            flash('Invalid user type', 'error')
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        # Check if email already exists for different member
+        existing_member = db.session.execute(
+            db.select(Member).filter_by(email=email)
+        ).scalar_one_or_none()
+        if existing_member and existing_member.user_id != member_id:
+            flash('A member with this email already exists', 'error')
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        # Update member details
+        member.email = email
+        member.user_type = user_type
+        db.session.commit()
+        flash('Member details updated successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating member: {str(e)}', 'error')
+    
+    return redirect(url_for('user.organization_list_student', service_type='S'))
+
+@oconvener_bp.route('/delete-member/<int:member_id>', methods=['POST'])
+def delete_member(member_id):
+    """Delete member by O-Convener"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        flash('Only O-Conveners can delete members', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    member = db.session.get(Member, member_id)
+    if not member or member.organization_id != oc.organization_id:
+        flash('Member not found in your organization', 'error')
+        return redirect(url_for('user.organization_list_student', service_type='S'))
+    
+    try:
+        # Prevent OC from deleting themselves
+        if member.user_id == oc.user_id:
+            flash('O-Conveners cannot delete themselves', 'error')
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        # Delete the member
+        db.session.delete(member)
+        db.session.commit()
+        flash('Member deleted successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting member: {str(e)}', 'error')
+    
+    return redirect(url_for('user.organization_list_student', service_type='S'))
 
 @oconvener_bp.route('/check_payment_service/<int:organization_id>')
 def check_payment_service_route(organization_id):
