@@ -66,7 +66,15 @@ def ask_for_help():
     if 'user_id' not in session:
         flash('Please login first', 'warning')
         return redirect(url_for('auth.login'))
-    return render_template('ask_for_help.html')
+    
+    # Get all questions for the current user, ordered by newest first
+    questions = db.session.execute(
+        db.select(Question)
+        .filter_by(sender_id=session['user_id'])
+        .order_by(Question.question_id.desc())
+    ).scalars().all()
+    
+    return render_template('ask_for_help.html', questions=questions)
 
 @user_bp.route('/submit-question', methods=['POST'])
 def submit_question():
