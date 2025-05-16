@@ -170,41 +170,47 @@ def se_admin_approve_application(app_id):
         return redirect(url_for('admin.se_admin_applications'))
         
     try:
-        # Create organization with initial settings
-        organization = Organization(name=application.organization_name)
-        db.session.add(organization)
-        db.session.flush()  # Get organization_id
-        
-        # Create workspace with detailed settings
-        workspace = Workspace(
-            organization_id=organization.organization_id,
-            name=f"{application.organization_name}'s Workspace",
-            status='active',
-            settings=json.dumps({
-                'created_by': session.get('user_id'),
-                'created_at': datetime.now().isoformat(),
-                'initial_setup_complete': True
-            })
-        )
-        db.session.add(workspace)
-        db.session.flush()
-        
-        # Create O-Convener member with initial fund
-        member = Member(
-            email=application.email,
-            user_type='OC',
-            organization_id=organization.organization_id,
-            fund=50  # Initial fund amount
-        )
-        db.session.add(member)
-        
-        # Update application with detailed tracking
-        application.status = 3  # se_admin_approved
-        application.se_admin_review_date = datetime.now()
-        application.se_admin_notes = request.form.get('notes')
-        application.workspace_id = workspace.workspace_id
-        
-        db.session.commit()
+        try:
+            # Create organization with initial settings
+            organization = Organization(name=application.organization_name)
+            db.session.add(organization)
+            db.session.flush()  # Get organization_id
+            
+            # Create workspace with detailed settings
+            workspace = Workspace(
+                organization_id=organization.organization_id,
+                name=f"{application.organization_name}'s Workspace",
+                status='active',
+                settings=json.dumps({
+                    'created_by': session.get('user_id'),
+                    'created_at': datetime.now().isoformat(),
+                    'initial_setup_complete': True
+                })
+            )
+            db.session.add(workspace)
+            db.session.flush()
+            
+            # Create O-Convener member with initial fund
+            member = Member(
+                email=application.email,
+                user_type='OC',
+                organization_id=organization.organization_id,
+                fund=50  # Initial fund amount
+            )
+            db.session.add(member)
+            
+            # Update application with detailed tracking
+            application.status = 3  # se_admin_approved
+            application.se_admin_review_date = datetime.now()
+            application.se_admin_notes = request.form.get('notes')
+            application.workspace_id = workspace.workspace_id
+            
+            db.session.commit()
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in approving application: {str(e)}")
+            raise e  # Re-raise to be caught by outer try-except
         
         # Send detailed notification email to O-Convener
         send_email(

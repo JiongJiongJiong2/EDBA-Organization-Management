@@ -5,7 +5,7 @@ from flask_mail import Message
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Application, ApplicationDocument
+from models import db, Member, Application, ApplicationDocument, Service
 
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -233,6 +233,40 @@ def login():
                     
                 session['user_id'] = member.user_id
                 session['organization_id'] = member.organization_id
+
+                # Initialize services for OC upon first login
+                if member.user_type == 'OC':
+                    # Check if organization has any services
+                    existing_services = db.session.execute(
+                        db.select(Service).filter_by(organization_id=member.organization_id)
+                    ).first()
+                    
+                    if not existing_services:
+                        # Create basic services
+                        services = [
+                            {'type': 'S', 'name': 'Thesis Search', 'path': '/api/thesis/search'},
+                            {'type': 'P', 'name': 'PDF Download', 'path': '/api/thesis/download'},
+                            {'type': 'C', 'name': 'Course Info', 'path': '/api/course/info'},
+                            {'type': 'A', 'name': 'Student Authentication', 'path': '/api/student/auth'},
+                            {'type': 'R', 'name': 'Student Records', 'path': '/api/student/records'},
+                            {'type': 'M', 'name': 'Money Transfer', 'path': '/api/transfer'}
+                        ]
+                        # Initialize each service
+                        for service in services:
+                            new_service = Service(
+                                organization_id=member.organization_id,
+                                service_type=service['type'],
+                                status=0,  # Initial status as unconfigured
+                                cost=0,
+                                path=service['path'],
+                                method='POST',  # Default to POST method
+                                url='',  # To be configured by OC
+                                input_data='{}',  # Default empty JSON
+                                output_data='{}'  # Default empty JSON
+                            )
+                            db.session.add(new_service)
+                        db.session.commit()
+
                 flash('登录成功', 'success')
                 print(f"Session user_type set to: {session['user_type']}")  # 调试信息
                 return redirect(url_for('user.dashboard', user_type=session['user_type']))
