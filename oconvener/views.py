@@ -6,10 +6,21 @@ import sqlite3
 import uuid
 import sys  
 import os  
+import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
 from models import db, Member, Service, CourseInformation, BankAccount
 
 import json
+
+# 配置上传文件存储
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'xlsx'}
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Database connection function for legacy code
 # Add payment service check function
@@ -610,6 +621,103 @@ def submit_configuration(service_id):
         flash(f'Error updating service configuration: {str(e)}', 'error')
     
     return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
+
+@oconvener_bp.route('/batch-import-members', methods=['POST'])
+def batch_import_members():
+    """Batch import members from Excel file"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        flash('Only O-Conveners can import members', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    if 'members_file' not in request.files:
+        flash('No file uploaded', 'error')
+        return redirect(url_for('user.organization_list_student', service_type='S'))
+    
+    file = request.files['members_file']
+    if file.filename == '' or not allowed_file(file.filename):
+        flash('Invalid file format. Please upload an Excel (.xlsx) file', 'error')
+        return redirect(url_for('user.organization_list_student', service_type='S'))
+    
+    try:
+        # 保存上传的文件
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
+        
+        # 读取Excel文件
+        df = pd.read_excel(filepath)
+        
+        # 验证必需的列是否存在
+        required_columns = ['email', 'user_type', 'fund']
+        if not all(col in df.columns for col in required_columns):
+            flash('Excel file must contain email, user_type, and fund columns', 'error')
+            os.remove(filepath)
+            return redirect(url_for('user.organization_list_student', service_type='S'))
+        
+        success_count = 0
+        error_count = 0
+        
+        # 开始批处理
+        for _, row in df.iterrows():
+            try:
+                # 验证数据
+                if not row['email'] or not isinstance(row['email'], str):
+                    error_count += 1
+                    continue
+                    
+                if not isinstance(row['fund'], (int, float)) or row['fund'] < 0:
+                    error_count += 1
+                    continue
+                    
+                if row['user_type'] not in ['PP', 'PC', 'CC']:
+                    error_count += 1
+                    continue
+                
+                # 检查邮箱是否存在
+                existing_member = db.session.execute(
+                    db.select(Member).filter_by(email=row['email'])
+                ).scalar_one_or_none()
+                
+                if existing_member:
+                    # 更新已存在的成员
+                    existing_member.user_type = row['user_type']
+                    existing_member.fund = int(row['fund'])
+                else:
+                    # 创建新成员
+                    new_member = Member(
+                        email=row['email'],
+                        user_type=row['user_type'],
+                        organization_id=oc.organization_id,
+                        fund=int(row['fund'])
+                    )
+                    db.session.add(new_member)
+                
+                success_count += 1
+                
+            except Exception as e:
+                error_count += 1
+                continue
+        
+        db.session.commit()
+        
+        # 删除上传的文件
+        os.remove(filepath)
+        
+        flash(f'Successfully processed {success_count} members. {error_count} errors encountered.', 
+              'success' if error_count == 0 else 'warning')
+        
+    except Exception as e:
+        db.session.rollback()
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        flash(f'Error processing file: {str(e)}', 'error')
+    
+    return redirect(url_for('user.organization_list_student', service_type='S'))
 
 @oconvener_bp.route('/questions/b')
 def question_b():

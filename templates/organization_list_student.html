@@ -41,6 +41,17 @@
                     <button type="submit" style="padding: 5px 10px;">Add Member</button>
                 </div>
             </form>
+
+            <h3 style="margin-top: 15px;">Batch Import Members</h3>
+            <form action="{{ url_for('oconvener.batch_import_members') }}" method="post" enctype="multipart/form-data">
+                <div style="margin-bottom: 10px;">
+                    <input type="file" name="members_file" accept=".xlsx" required style="padding: 5px;">
+                    <button type="submit" style="padding: 5px 10px;">Import Members</button>
+                </div>
+                <small style="display: block; color: #666;">
+                    Upload Excel file (.xlsx) with columns: email, user_type (PP/PC/CC), fund
+                </small>
+            </form>
         </div>
 
         <h3>Manage Organization Members</h3>
