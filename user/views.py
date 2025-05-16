@@ -179,9 +179,13 @@ def download_gpa_template(service_id):
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
 
     # Create DataFrame with column headers based on service.input_json
-    columns = [field_name for field_name, field_type in service.input_json.items() 
-              if field_type != 'file']
+    columns = list(service.input_json.keys())
     df = pd.DataFrame(columns=columns)
+
+    # Add a comment row for file type fields
+    comments = {field_name: 'Place file in "files" folder and enter filename here' 
+               for field_name, field_type in service.input_json.items() 
+               if field_type == 'file'}
     
     # Create Excel file in memory
     output = io.BytesIO()
@@ -248,9 +252,13 @@ def download_template(service_id):
         return redirect(url_for('user.download_gpa_template', service_id=service_id))
 
     # Create DataFrame with column headers based on service.input_json
-    columns = [field_name for field_name, field_type in service.input_json.items() 
-              if field_type != 'file']
+    columns = list(service.input_json.keys())
     df = pd.DataFrame(columns=columns)
+
+    # Add comment row to help users with file fields
+    comments = {field_name: 'Place file in "files" folder and enter filename here' 
+               for field_name, field_type in service.input_json.items() 
+               if field_type == 'file'}
     
     # Create Excel file in memory
     output = io.BytesIO()
@@ -278,6 +286,10 @@ def submit_batch_gpa(service_id):
     if not service:
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
 
+    # Ensure files directory exists
+    if not os.path.exists('files'):
+        os.makedirs('files')
+
     if 'batch_file' not in request.files:
         flash('No file uploaded', 'error')
         return redirect(url_for('user.student_inquiry', service_id=service_id))
@@ -290,8 +302,9 @@ def submit_batch_gpa(service_id):
     try:
         # Read Excel file
         df = pd.read_excel(file)
-        required_fields = [field_name for field_name, field_type in service.input_json.items() 
-                         if field_type != 'file']
+        required_fields = list(service.input_json.keys())
+        file_fields = {field_name: field_type for field_name, field_type in service.input_json.items() 
+                      if field_type == 'file'}
         
         # Validate columns
         missing_cols = set(required_fields) - set(df.columns)
@@ -305,8 +318,28 @@ def submit_batch_gpa(service_id):
         # Process each row
         for idx, row in df.iterrows():
             try:
-                data = {field: str(row[field]) for field in required_fields if pd.notna(row[field])}
-                response = requests.post(url, json=data)
+                data = {}
+                files = {}
+                
+                for field_name in required_fields:
+                    if pd.notna(row[field_name]):
+                        if field_name in file_fields:
+                            file_path = os.path.join('files', str(row[field_name]))
+                            if os.path.exists(file_path):
+                                files[field_name] = open(file_path, 'rb')
+                            else:
+                                raise Exception(f"File not found: {file_path}")
+                        else:
+                            data[field_name] = str(row[field_name])
+                
+                if files:
+                    response = requests.post(url, data=data, files=files)
+                else:
+                    response = requests.post(url, json=data)
+                
+                # Close file handlers
+                for file_obj in files.values():
+                    file_obj.close()
                 
                 results.append({
                     'row_number': idx + 2,
@@ -332,14 +365,13 @@ def submit_batch_gpa(service_id):
 @validate_session
 def submit_batch_inquiry(service_id):
     """Handle batch student inquiries via Excel file"""
-    if 'user_id' not in session:
-        flash('Please login first', 'warning')
-        return redirect(url_for('auth.login'))
-    
-    service = db.session.get(Service, service_id)
+    service = get_service_or_404(service_id)
     if not service:
-        flash('Service not found', 'error')
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+
+    # Ensure files directory exists
+    if not os.path.exists('files'):
+        os.makedirs('files')
 
     if 'batch_file' not in request.files:
         flash('No file uploaded', 'error')
@@ -353,8 +385,9 @@ def submit_batch_inquiry(service_id):
     try:
         # Read Excel file
         df = pd.read_excel(file)
-        required_fields = [field_name for field_name, field_type in service.input_json.items() 
-                         if field_type != 'file']
+        required_fields = list(service.input_json.keys())
+        file_fields = {field_name: field_type for field_name, field_type in service.input_json.items() 
+                      if field_type == 'file'}
         
         # Validate columns
         missing_cols = set(required_fields) - set(df.columns)
@@ -368,8 +401,28 @@ def submit_batch_inquiry(service_id):
         # Process each row
         for idx, row in df.iterrows():
             try:
-                data = {field: str(row[field]) for field in required_fields if pd.notna(row[field])}
-                response = requests.post(url, json=data)
+                data = {}
+                files = {}
+                
+                for field_name in required_fields:
+                    if pd.notna(row[field_name]):
+                        if field_name in file_fields:
+                            file_path = os.path.join('files', str(row[field_name]))
+                            if os.path.exists(file_path):
+                                files[field_name] = open(file_path, 'rb')
+                            else:
+                                raise Exception(f"File not found: {file_path}")
+                        else:
+                            data[field_name] = str(row[field_name])
+                
+                if files:
+                    response = requests.post(url, data=data, files=files)
+                else:
+                    response = requests.post(url, json=data)
+                
+                # Close file handlers
+                for file_obj in files.values():
+                    file_obj.close()
                 
                 results.append({
                     'row_number': idx + 2,  # +2 because Excel rows start at 1 and we skip header

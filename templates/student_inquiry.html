@@ -85,9 +85,12 @@
                     <p>Note: Please upload an Excel file (.xlsx) with the following columns:</p>
                     <ul>
                         {% for field_name, field_type in service.input_json.items() %}
-                            {% if field_type != "file" %}
-                                <li>{{ field_name }}</li>
-                            {% endif %}
+                            <li>
+                                {{ field_name }}
+                                {% if field_type == "file" %}
+                                    <span style="color: #666;">(Create a folder named 'files' and put your files there, then write the filename in this column)</span>
+                                {% endif %}
+                            </li>
                         {% endfor %}
                     </ul>
                     <a href="{{ url_for('user.download_' + ('gpa_template' if service.service_type == 'GPA' else 'template'), service_id=service.service_id) }}" 
