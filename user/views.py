@@ -11,6 +11,23 @@ import pandas as pd
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import send_file, Response
+from functools import wraps
+
+def validate_session(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please login first', 'warning')
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_service_or_404(service_id):
+    service = db.session.get(Service, service_id)
+    if not service:
+        flash('Service not found', 'error')
+        return None
+    return service
 
 user_bp = Blueprint('user', __name__)
 
@@ -148,8 +165,9 @@ def student_inquiry(service_id):
                            service=service,
                            result=session.pop('inquiry_result', None))
 
-@user_bp.route('/download_template/<int:service_id>')
-def download_template(service_id):
+@user_bp.route('/download_gpa_template/<int:service_id>')
+@validate_session
+def download_gpa_template(service_id):
     """Provide an Excel template for batch student inquiries"""
     if 'user_id' not in session:
         flash('Please login first', 'warning')
@@ -218,7 +236,100 @@ def submit_inquiry(service_id):
         flash(f'Error occurred: {str(e)}', 'error')
         return redirect(url_for('user.student_inquiry', service_id=service_id))
 
+@user_bp.route('/download_template/<int:service_id>')
+@validate_session
+def download_template(service_id):
+    """Provide an Excel template for batch student inquiries"""
+    service = get_service_or_404(service_id)
+    if not service:
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    if service.service_type == 'GPA':
+        return redirect(url_for('user.download_gpa_template', service_id=service_id))
+
+    # Create DataFrame with column headers based on service.input_json
+    columns = [field_name for field_name, field_type in service.input_json.items() 
+              if field_type != 'file']
+    df = pd.DataFrame(columns=columns)
+    
+    # Create Excel file in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='Batch Query', index=False)
+        worksheet = writer.sheets['Batch Query']
+        
+        # Add column width and format
+        for idx, col in enumerate(df.columns):
+            worksheet.set_column(idx, idx, max(len(col) + 2, 15))
+
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'student_inquiry_template_{service_id}.xlsx'
+    )
+
+@user_bp.route('/submit-batch-gpa/<int:service_id>', methods=['POST'])
+@validate_session
+def submit_batch_gpa(service_id):
+    """Handle batch GPA inquiries via Excel file"""
+    service = get_service_or_404(service_id)
+    if not service:
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+
+    if 'batch_file' not in request.files:
+        flash('No file uploaded', 'error')
+        return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+    file = request.files['batch_file']
+    if not file or not file.filename.endswith('.xlsx'):
+        flash('Please upload a valid Excel file (.xlsx)', 'error')
+        return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+    try:
+        # Read Excel file
+        df = pd.read_excel(file)
+        required_fields = [field_name for field_name, field_type in service.input_json.items() 
+                         if field_type != 'file']
+        
+        # Validate columns
+        missing_cols = set(required_fields) - set(df.columns)
+        if missing_cols:
+            flash(f'Missing required columns: {", ".join(missing_cols)}', 'error')
+            return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+        results = []
+        url = service.url + service.path
+
+        # Process each row
+        for idx, row in df.iterrows():
+            try:
+                data = {field: str(row[field]) for field in required_fields if pd.notna(row[field])}
+                response = requests.post(url, json=data)
+                
+                results.append({
+                    'row_number': idx + 2,
+                    'status': 'Success',
+                    'result': response.json()
+                })
+            except Exception as e:
+                results.append({
+                    'row_number': idx + 2,
+                    'status': 'Error',
+                    'result': str(e)
+                })
+
+        session['inquiry_result'] = results
+        session['gpa_batch_results'] = results  # Store for potential download
+        return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+    except Exception as e:
+        flash(f'Error processing file: {str(e)}', 'error')
+        return redirect(url_for('user.student_inquiry', service_id=service_id))
+
 @user_bp.route('/submit-batch-inquiry/<int:service_id>', methods=['POST'])
+@validate_session
 def submit_batch_inquiry(service_id):
     """Handle batch student inquiries via Excel file"""
     if 'user_id' not in session:
@@ -280,7 +391,49 @@ def submit_batch_inquiry(service_id):
         flash(f'Error processing file: {str(e)}', 'error')
         return redirect(url_for('user.student_inquiry', service_id=service_id))
 
+@user_bp.route('/download_gpa_results/<int:service_id>')
+@validate_session
+def download_gpa_results(service_id):
+    """Download batch GPA query results as Excel file"""
+    if 'gpa_batch_results' not in session:
+        flash('No GPA results available for download', 'error')
+        return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+    results = session['gpa_batch_results']
+    
+    # Create DataFrame from results
+    rows = []
+    for result in results:
+        row = {
+            'Row': result['row_number'],
+            'Status': result['status'],
+            'Result': str(result['result'])
+        }
+        rows.append(row)
+    
+    df = pd.DataFrame(rows)
+    
+    # Create Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name='GPA Query Results', index=False)
+        worksheet = writer.sheets['GPA Query Results']
+        
+        # Format columns
+        for idx, col in enumerate(df.columns):
+            max_length = max(df[col].astype(str).apply(len).max(), len(col)) + 2
+            worksheet.set_column(idx, idx, min(max_length, 50))
+
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'student_gpa_results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    )
+
 @user_bp.route('/download_results/<int:service_id>')
+@validate_session
 def download_results(service_id):
     """Download batch query results as Excel file"""
     if 'user_id' not in session or 'batch_results' not in session:
