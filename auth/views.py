@@ -6,6 +6,7 @@ import sys
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
 from models import db, Member, Application, ApplicationDocument, Service
+from db_utils import get_email_suffix, find_matching_wildcard_rule, create_member_from_wildcard
 
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -215,10 +216,27 @@ def login():
                 session.pop('verification_code', None)
                 session.pop('email_pending', None)
 
+                # 先尝试精确匹配
                 member = db.session.execute(db.select(Member).filter_by(email=email)).scalar_one_or_none()
+                
                 if not member:
-                    flash('该用户不存在，请联系组织召集人', 'danger')
-                    return redirect(url_for('auth.login'))
+                    # 如果用户不存在，尝试通配符匹配
+                    email_suffix = get_email_suffix(email)
+                    if email_suffix:
+                        wildcard_member = find_matching_wildcard_rule(email_suffix)
+                        if wildcard_member:
+                            # 根据通配符规则创建新用户
+                            try:
+                                member = create_member_from_wildcard(email, wildcard_member)
+                            except Exception as e:
+                                flash(f'创建用户失败: {str(e)}', 'danger')
+                                return redirect(url_for('auth.login'))
+                        else:
+                            flash('该用户不存在，请联系组织召集人', 'danger')
+                            return redirect(url_for('auth.login'))
+                    else:
+                        flash('该用户不存在，请联系组织召集人', 'danger')
+                        return redirect(url_for('auth.login'))
 
                 # 输出调试信息
                 print(f"User login - Email: {email}, Type: {member.user_type}")

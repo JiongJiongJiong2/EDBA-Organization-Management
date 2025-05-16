@@ -9,6 +9,7 @@ import os
 import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
 from models import db, Member, Service, CourseInformation, BankAccount
+from db_utils import validate_email_pattern
 
 import json
 
@@ -669,6 +670,11 @@ def batch_import_members():
                 if not row['email'] or not isinstance(row['email'], str):
                     error_count += 1
                     continue
+
+                # 验证邮箱格式
+                if not validate_email_pattern(row['email']):
+                    error_count += 1
+                    continue
                     
                 if not isinstance(row['fund'], (int, float)) or row['fund'] < 0:
                     error_count += 1
@@ -678,24 +684,44 @@ def batch_import_members():
                     error_count += 1
                     continue
                 
-                # 检查邮箱是否存在
-                existing_member = db.session.execute(
-                    db.select(Member).filter_by(email=row['email'])
-                ).scalar_one_or_none()
-                
-                if existing_member:
-                    # 更新已存在的成员
-                    existing_member.user_type = row['user_type']
-                    existing_member.fund = int(row['fund'])
+                # 如果是通配符邮箱模式，直接创建/更新
+                if '*@' in row['email']:
+                    existing_member = db.session.execute(
+                        db.select(Member).filter_by(email=row['email'])
+                    ).scalar_one_or_none()
+                    
+                    if existing_member:
+                        # 更新已存在的通配符规则
+                        existing_member.user_type = row['user_type']
+                        existing_member.fund = int(row['fund'])
+                    else:
+                        # 创建新的通配符规则
+                        new_member = Member(
+                            email=row['email'],
+                            user_type=row['user_type'],
+                            organization_id=oc.organization_id,
+                            fund=int(row['fund'])
+                        )
+                        db.session.add(new_member)
                 else:
-                    # 创建新成员
-                    new_member = Member(
-                        email=row['email'],
-                        user_type=row['user_type'],
-                        organization_id=oc.organization_id,
-                        fund=int(row['fund'])
-                    )
-                    db.session.add(new_member)
+                    # 处理普通邮箱
+                    existing_member = db.session.execute(
+                        db.select(Member).filter_by(email=row['email'])
+                    ).scalar_one_or_none()
+                    
+                    if existing_member:
+                        # 更新已存在的成员
+                        existing_member.user_type = row['user_type']
+                        existing_member.fund = int(row['fund'])
+                    else:
+                        # 创建新成员
+                        new_member = Member(
+                            email=row['email'],
+                            user_type=row['user_type'],
+                            organization_id=oc.organization_id,
+                            fund=int(row['fund'])
+                        )
+                        db.session.add(new_member)
                 
                 success_count += 1
                 
