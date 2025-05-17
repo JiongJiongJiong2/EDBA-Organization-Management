@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Organization, Service, Question, CourseInformation, Application
+from models import db, Member, Organization, Service, Question, CourseInformation, Application, BankAccount
 
 import requests
 import io
@@ -28,6 +28,106 @@ def get_service_or_404(service_id):
         flash('Service not found', 'error')
         return None
     return service
+
+def process_payment(user_id, service_id, query_count=1):
+    """Process payment for a service"""
+    try:
+        # Debug logging
+        print(f"Processing payment for user {user_id}, service {service_id}, query count {query_count}")
+        
+        user = db.session.get(Member, user_id)
+        service = db.session.get(Service, service_id)
+        
+        if not user or not service:
+            print("Error: User or service not found")
+            return False, "Invalid user or service"
+        
+        # Calculate total cost
+        total_cost = service.cost * query_count
+        print(f"Total cost: {total_cost}, User's fund: {user.fund}")
+        
+        # Check user's fund
+        if user.fund < total_cost:
+            print("Error: Insufficient funds")
+            return False, "Your fund is not enough! Please connect with your O-convener."
+            
+        # Get payment service for both organizations
+        payment_service_from = db.session.execute(
+            db.select(Service)
+            .filter_by(organization_id=user.organization_id)
+            .filter_by(service_type='M')
+            .filter_by(status=2)
+        ).scalar_one_or_none()
+        
+        payment_service_to = db.session.execute(
+            db.select(Service)
+            .filter_by(organization_id=service.organization_id)
+            .filter_by(service_type='M')
+            .filter_by(status=2)
+        ).scalar_one_or_none()
+        
+        print(f"Payment services - From: {payment_service_from}, To: {payment_service_to}")
+        
+        if not payment_service_from or not payment_service_to:
+            print("Error: Payment service not configured")
+            return False, "Payment service configuration not completed! Please connect with your O-convener."
+            
+        # Get bank accounts
+        from_bank = db.session.execute(
+            db.select(BankAccount)
+            .filter_by(organization_id=user.organization_id)
+        ).scalar_one_or_none()
+        
+        to_bank = db.session.execute(
+            db.select(BankAccount)
+            .filter_by(organization_id=service.organization_id)
+        ).scalar_one_or_none()
+        
+        print(f"Bank accounts - From: {from_bank}, To: {to_bank}")
+        
+        if not from_bank or not to_bank:
+            print("Error: Bank accounts not configured")
+            return False, "Payment service configuration not completed! Please connect with your O-convener."
+            
+        # Prepare payment data
+        payment_data = {
+            "from_bank": from_bank.bank,
+            "from_name": from_bank.name,
+            "from_account": from_bank.number,
+            "password": from_bank.password,
+            "to_bank": to_bank.bank,
+            "to_name": to_bank.name,
+            "to_account": to_bank.number,
+            "amount": total_cost
+        }
+        
+        # Construct payment URL
+        payment_url = payment_service_from.url.rstrip('/') + '/' + payment_service_from.path.lstrip('/')
+        print(f"Sending payment request to: {payment_url}")
+        
+        # Send payment request
+        response = requests.post(payment_url, json=payment_data)
+        print(f"Payment response: {response.text}")
+        
+        try:
+            response_data = response.json()
+            if response_data.get("status") != "success":
+                print(f"Payment failed: {response_data}")
+                return False, "Payment failure! Please connect with your O-convener."
+        except Exception as e:
+            print(f"Error parsing payment response: {e}")
+            return False, "Payment system error! Please connect with your O-convener."
+            
+        # Update user's fund
+        user.fund -= total_cost
+        db.session.commit()
+        print(f"Payment successful, updated user fund to: {user.fund}")
+        
+        return True, None
+        
+    except Exception as e:
+        db.session.rollback()
+        return False, f"Payment error: {str(e)}"
 
 user_bp = Blueprint('user', __name__)
 
@@ -214,8 +314,14 @@ def student_inquiry(service_id):
         flash('Service not found', 'error')
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
     
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
     return render_template('student_inquiry.html', 
                            service=service,
+                           user=user,
                            result=session.pop('inquiry_result', None))
 
 @user_bp.route('/download_gpa_template/<int:service_id>')
@@ -264,12 +370,25 @@ def submit_inquiry(service_id):
         flash('Please login first', 'warning')
         return redirect(url_for('auth.login'))
     
+    print(f"Processing inquiry for service {service_id}")
+    print(f"Form data: {request.form}")
+    print(f"Files: {request.files}")
+    print(f"Request method: {request.method}")
+    
     service = db.session.get(Service, service_id)
     if not service:
         flash('Service not found', 'error')
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
     
     try:
+        # Process payment first
+        print("Processing payment...")
+        success, error_message = process_payment(session['user_id'], service_id)
+        if not success:
+            flash(error_message, 'error')
+            return redirect(url_for('user.student_inquiry', service_id=service_id))
+
+        # Prepare inquiry data
         data = {}
         files = {}
         for field_name, field_type in service.input_json.items():
@@ -279,14 +398,32 @@ def submit_inquiry(service_id):
             else:
                 data[field_name] = request.form.get(field_name, '')
         
-        url = service.url + service.path
+        print(f"Prepared data: {data}")
+        print(f"Files to upload: {list(files.keys())}")
+        
+        # Construct query URL
+        service_url = service.url.rstrip('/')
+        service_path = service.path.lstrip('/')
+        url = f"{service_url}/{service_path}"
+        print(f"Sending request to: {url}")
         
         if files:
+            print("Sending request with files...")
             response = requests.post(url, data=data, files=files)
         else:
+            print("Sending request with JSON data...")
             response = requests.post(url, json=data)
         
-        session['inquiry_result'] = response.json()
+        print(f"Response status: {response.status_code}")
+        print(f"Response content: {response.text}")
+        
+        try:
+            response_data = response.json()
+            session['inquiry_result'] = response_data
+        except Exception as e:
+            print(f"Error parsing response: {e}")
+            session['inquiry_result'] = {'error': 'Invalid response from service'}
+        
         return redirect(url_for('user.student_inquiry', service_id=service_id))
         
     except Exception as e:
@@ -355,6 +492,13 @@ def submit_batch_gpa(service_id):
     try:
         # Read Excel file
         df = pd.read_excel(file)
+        query_count = len(df)
+
+        # Process payment first
+        success, error_message = process_payment(session['user_id'], service_id, query_count)
+        if not success:
+            flash(error_message, 'error')
+            return redirect(url_for('user.student_inquiry', service_id=service_id))
         required_fields = list(service.input_json.keys())
         file_fields = {field_name: field_type for field_name, field_type in service.input_json.items() 
                       if field_type == 'file'}
@@ -365,8 +509,13 @@ def submit_batch_gpa(service_id):
             flash(f'Missing required columns: {", ".join(missing_cols)}', 'error')
             return redirect(url_for('user.student_inquiry', service_id=service_id))
 
+        # Construct query URL properly
+        service_url = service.url.rstrip('/')
+        service_path = service.path.lstrip('/')
+        url = f"{service_url}/{service_path}"
+        
+        print(f"Sending batch requests to: {url}")
         results = []
-        url = service.url + service.path
 
         # Process each row
         for idx, row in df.iterrows():
@@ -438,6 +587,13 @@ def submit_batch_inquiry(service_id):
     try:
         # Read Excel file
         df = pd.read_excel(file)
+        query_count = len(df)
+
+        # Process payment first
+        success, error_message = process_payment(session['user_id'], service_id, query_count)
+        if not success:
+            flash(error_message, 'error')
+            return redirect(url_for('user.student_inquiry', service_id=service_id))
         required_fields = list(service.input_json.keys())
         file_fields = {field_name: field_type for field_name, field_type in service.input_json.items() 
                       if field_type == 'file'}
@@ -448,9 +604,14 @@ def submit_batch_inquiry(service_id):
             flash(f'Missing required columns: {", ".join(missing_cols)}', 'error')
             return redirect(url_for('user.student_inquiry', service_id=service_id))
 
+        # Construct query URL properly
+        service_url = service.url.rstrip('/')
+        service_path = service.path.lstrip('/')
+        url = f"{service_url}/{service_path}"
+        
+        print(f"Sending batch requests to: {url}")
         results = []
-        url = service.url + service.path
-
+        
         # Process each row
         for idx, row in df.iterrows():
             try:
@@ -659,12 +820,26 @@ def submit_thesis_inquiry(service_id):
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
     
     try:
+        # Process payment first
+        success, error_message = process_payment(session['user_id'], service_id)
+        if not success:
+            flash(error_message, 'error')
+            return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+
         data = {}
         if 'search' in request.form:
             for field_name, field_type in service.input_json.items():
                 data[field_name] = request.form.get(field_name, '')
-            url = service.url + service.path
+            
+            # Construct query URL properly
+            service_url = service.url.rstrip('/')
+            service_path = service.path.lstrip('/')
+            url = f"{service_url}/{service_path}"
+            print(f"Sending search request to: {url}")
+            
             response = requests.post(url, json=data)
+            print(f"Response status: {response.status_code}")
+            print(f"Response content: {response.text}")
             if response.status_code == 200:
                 result = response.json()
                 if result:
@@ -678,8 +853,15 @@ def submit_thesis_inquiry(service_id):
         elif 'download' in request.form:
             for field_name, field_type in service.input_json.items():
                 data[field_name] = request.form.get(field_name, '')
-            url = service.url + service.path
+            # Construct query URL properly
+            service_url = service.url.rstrip('/')
+            service_path = service.path.lstrip('/')
+            url = f"{service_url}/{service_path}"
+            print(f"Sending download request to: {url}")
+            
             response = requests.post(url, json=data)
+            print(f"Response status: {response.status_code}")
+            print(f"Response content type: {response.headers.get('Content-Type', 'unknown')}")
 
             if response.status_code == 200:
                 filename = 'thesis.pdf'

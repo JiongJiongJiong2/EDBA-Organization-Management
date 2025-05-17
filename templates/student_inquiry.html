@@ -47,6 +47,57 @@
 <body>
     <h2>Student Inquiry</h2>
     {% if service %}
+    <!-- Add SheetJS library for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+
+    <div class="payment-info" style="margin: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f8f9fa;">
+        <h4>Payment Information</h4>
+        <p>Your current fund: <strong>{{ user.fund }}</strong></p>
+        <p>Service cost per query: <strong>{{ service.cost }}</strong></p>
+        <div id="total-cost" style="display: none;">
+            <p>Total cost for batch query: <strong id="total-cost-value"></strong></p>
+        </div>
+    </div>
+
+    <script>
+        // Store the cost per query in a global variable
+        var COST_PER_QUERY = parseFloat("{{ service.cost }}");
+        
+        // Add event listener after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            var batchFileInput = document.getElementById('batch_file');
+            var totalCostDiv = document.getElementById('total-cost');
+            var totalCostValue = document.getElementById('total-cost-value');
+            
+            if (batchFileInput) {
+                batchFileInput.addEventListener('change', function(event) {
+                    var file = event.target.files[0];
+                    if (!file) {
+                        totalCostDiv.style.display = 'none';
+                        return;
+                    }
+                    
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            var data = new Uint8Array(e.target.result);
+                            var workbook = XLSX.read(data, {type: 'array'});
+                            var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            var rows = XLSX.utils.sheet_to_json(firstSheet);
+                            var totalCost = rows.length * COST_PER_QUERY;
+                            
+                            totalCostValue.textContent = totalCost;
+                            totalCostDiv.style.display = 'block';
+                        } catch (error) {
+                            console.error('Error reading Excel file:', error);
+                            totalCostDiv.style.display = 'none';
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+        });
+    </script>
         {# Service type specific title #}
         <h2>{{ 'Student GPA Inquiry' if service.service_type == 'GPA' else 'Student Information Inquiry' }}</h2>
         
@@ -68,7 +119,7 @@
                     {% endif %}
                 </div>
             {% endfor %}
-                <button type="submit">Submit Query</button>
+                <button type="submit" name="submit">Submit Query</button>
             </form>
         </div>
 
