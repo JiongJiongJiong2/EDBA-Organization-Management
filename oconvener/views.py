@@ -576,6 +576,36 @@ def configuration_interface(organization_id):
                          services=services,
                          user=user)
 
+@oconvener_bp.route('/release-service/<int:service_id>', methods=['POST'])
+def release_service(service_id):
+    """Release a service for PC users"""
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can release services', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    service = db.session.get(Service, service_id)
+    if not service or service.organization_id != user.organization_id:
+        flash('Service not found or you do not have permission', 'error')
+        return redirect(url_for('oconvener.configuration_interface', organization_id=user.organization_id))
+    
+    try:
+        if service.status == 2:  # 只有状态为2的服务可以发布
+            service.status = 3
+            db.session.commit()
+            flash('Service has been released successfully', 'success')
+        else:
+            flash('Only configured services can be released', 'error')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error releasing service: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
+
 @oconvener_bp.route('/submit_configuration/<int:service_id>', methods=['POST'])
 def submit_configuration(service_id):
     """Submit service configuration"""
@@ -606,13 +636,15 @@ def submit_configuration(service_id):
             output_json = json.loads(request.form.get('output_json', '{}'))
             service.input_json = input_json
             service.output_json = output_json
-            
-            # When configuration is complete, update status to 2 (Active)
-            if service.status == 1:
-                service.status = 2
         except json.JSONDecodeError:
             flash('Invalid JSON format in inputs or outputs', 'error')
             return redirect(url_for('oconvener.configuration_interface', organization_id=service.organization_id))
+
+        # Update service status
+        if service.status == 3:
+            service.status = 2  # If service is in status 3 and being edited, change it back to status 2
+        elif service.status == 1:
+            service.status = 2  # When initial configuration is complete, update status to 2
         
         db.session.commit()
         flash('Service configuration updated successfully', 'success')

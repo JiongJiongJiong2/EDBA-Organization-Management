@@ -5,7 +5,7 @@ from flask_mail import Message
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Application, ApplicationDocument, Service
+from models import db, Member, Application, ApplicationDocument, Service, Policy
 from db_utils import get_email_suffix, find_matching_wildcard_rule, create_member_from_wildcard
 
 from werkzeug.utils import secure_filename
@@ -14,6 +14,27 @@ import random
 import string
 
 auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/get_latest_policy')
+def get_latest_policy():
+    """Fetch the most recent policy"""
+    policy = db.session.execute(
+        db.select(Policy)
+        .order_by(Policy.created_at.desc())
+    ).scalar_one_or_none()
+    
+    if policy:
+        return jsonify({
+            'title': policy.title,
+            'content': policy.content,
+            'pdf_path': url_for('admin.download_policy_pdf', policy_id=policy.policy_id) if policy.pdf_path else None
+        })
+    
+    return jsonify({
+        'title': 'No Policy Available',
+        'content': 'No policy has been created yet.',
+        'pdf_path': None
+    })
 
 # 生成验证码
 def generate_verification_code(length=6):

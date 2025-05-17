@@ -52,7 +52,7 @@ class Service(db.Model):
     'M': transfer money
     '''
     
-    status = db.Column(db.Integer, nullable=False)  # 服务状态: 0, 1, 2
+    status = db.Column(db.Integer, nullable=False)  # 服务状态: 0(未配置), 1(初始配置待完善), 2(配置完成仅PP可见), 3(发布状态可PC使用)
     cost = db.Column(db.Integer, nullable=False)
 
     url = db.Column(db.String(255), nullable=True)

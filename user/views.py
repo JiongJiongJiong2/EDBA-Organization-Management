@@ -167,11 +167,17 @@ def organization_list_student(service_type):
     if request.method == 'POST':
         organization_id = request.form.get('organization_id')
         if organization_id:
+            # For PC and CC users, only show released services
+            if user.user_type in ['PC', 'CC']:
+                status_filter = 3
+            else:
+                status_filter = 2
+
             service = db.session.execute(
                 db.select(Service)
                 .filter(Service.organization_id == organization_id)
                 .filter(Service.service_type == service_type)
-                .filter(Service.status == 2)
+                .filter(Service.status == status_filter)
             ).scalar_one_or_none()
             
             if service:
@@ -179,13 +185,16 @@ def organization_list_student(service_type):
             else:
                 flash('Service not available', 'error')
     
-    organizations = db.session.execute(
-        db.select(Organization)
-        .join(Service)
-        .filter(Service.service_type == service_type)
-        .filter(Service.status == 2)
-        .distinct()
-    ).scalars().all()
+    # Filter services based on user type
+    query = db.select(Organization).join(Service).filter(Service.service_type == service_type)
+    
+    # PC and CC users can only see released services
+    if user.user_type in ['PC', 'CC']:
+        query = query.filter(Service.status == 3)
+    else:
+        query = query.filter(Service.status == 2)
+
+    organizations = db.session.execute(query.distinct()).scalars().all()
     
     return render_template('organization_list_student.html', 
                            organizations=organizations, 
@@ -585,11 +594,17 @@ def organization_list_thesis(service_type):
     if request.method == 'POST':
         organization_id = request.form.get('organization_id')
         if organization_id:
+            # For PC and CC users, only show released services
+            if user.user_type in ['PC', 'CC']:
+                status_filter = 3
+            else:
+                status_filter = 2
+
             service = db.session.execute(
                 db.select(Service)
                 .filter(Service.organization_id == organization_id)
                 .filter(Service.service_type == service_type)
-                .filter(Service.status == 2)
+                .filter(Service.status == status_filter)
             ).scalar_one_or_none()
             
             if service:
@@ -597,13 +612,16 @@ def organization_list_thesis(service_type):
             else:
                 flash('Service not available', 'error')
     
-    organizations = db.session.execute(
-        db.select(Organization)
-        .join(Service)
-        .filter(Service.service_type == service_type)
-        .filter(Service.status == 2)
-        .distinct()
-    ).scalars().all()
+    # Filter services based on user type
+    query = db.select(Organization).join(Service).filter(Service.service_type == service_type)
+    
+    # PC and CC users can only see released services
+    if user.user_type in ['PC', 'CC']:
+        query = query.filter(Service.status == 3)
+    else:
+        query = query.filter(Service.status == 2)
+
+    organizations = db.session.execute(query.distinct()).scalars().all()
     
     return render_template('organization_list_thesis.html', 
                            organizations=organizations, 
