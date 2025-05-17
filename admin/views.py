@@ -249,6 +249,72 @@ def se_admin_main():
     return render_template('se_admin_user_management.html')
 
 # E-Admin Routes
+# 修改后的 e_admin_applications 函数
+@admin_bp.route('/e_admin/applications')
+def e_admin_applications():
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Get all applications
+    applications = db.session.execute(
+        db.select(Application)
+        .order_by(Application.created_at.desc())
+    ).scalars().all()
+    
+    # 添加 timedelta 到模板上下文
+    from datetime import datetime, timedelta
+    
+    return render_template('e_admin_applications.html', 
+                         applications=applications,
+                         now=datetime.now(),
+                         timedelta=timedelta)  # 将 timedelta 类传递给模板
+
+@admin_bp.route('/e_admin/applications/<int:app_id>/approve', methods=['POST'])
+def approve_application(app_id):
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    application = db.session.get(Application, app_id)
+    if application:
+        application.status = 1  # Approved
+        db.session.commit()
+        flash('Application approved successfully', 'success')
+    else:
+        flash('Application not found', 'error')
+    
+    return redirect(url_for('admin.e_admin_applications'))
+
+@admin_bp.route('/e_admin/applications/<int:app_id>/reject', methods=['POST'])
+def reject_application(app_id):
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    application = db.session.get(Application, app_id)
+    if application:
+        application.status = 2  # Rejected
+        db.session.commit()
+        flash('Application rejected', 'info')
+    else:
+        flash('Application not found', 'error')
+    
+    return redirect(url_for('admin.e_admin_applications'))
+
+@admin_bp.route('/e_admin/document/<int:doc_id>')
+def download_document(doc_id):
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    document = db.session.get(ApplicationDocument, doc_id)
+    if document and document.file_path:
+        return send_file(document.file_path, as_attachment=True)
+    
+    flash('Document not found', 'error')
+    return redirect(url_for('admin.e_admin_applications'))
+
 @admin_bp.route('/e_admin/bank-settings')
 def bank_settings():
     if 'user_id' not in session or session.get('user_type') != 'EE':
@@ -298,3 +364,176 @@ def update_bank_account():
         flash(f'Error updating bank account settings: {str(e)}', 'error')
     
     return redirect(url_for('admin.bank_settings'))
+
+
+#eadmin_policy
+# 显示政策管理页面
+@admin_bp.route('/e_admin_policies')
+
+def e_admin_policies():
+    # 确保用户是EE管理员
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # 获取所有政策
+    policies = Policy.query.all()
+    return render_template('e_admin_policies.html', policies=policies)
+
+# 添加新政策
+@admin_bp.route('/policy/add', methods=['POST'])
+
+def add_policy():
+    # 权限检查
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    title = request.form.get('title')
+    content = request.form.get('content')
+    
+    # 创建新的政策记录
+    new_policy = Policy(
+        title=title,
+        content=content,
+        created_at=datetime.now(),
+        updated_at=datetime.now()
+    )
+    
+    # 处理PDF文件上传（如果有）
+    if 'pdf_file' in request.files and request.files['pdf_file'].filename:
+        pdf_file = request.files['pdf_file']
+        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{pdf_file.filename}")
+        
+        # 确保政策文件目录存在
+        policies_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'policies')
+        if not os.path.exists(policies_dir):
+            os.makedirs(policies_dir)
+        
+        # 保存文件
+        file_path = os.path.join(policies_dir, filename)
+        pdf_file.save(file_path)
+        
+        # 记录文件路径
+        new_policy.pdf_path = os.path.join('policies', filename)
+    
+    # 保存到数据库
+    db.session.add(new_policy)
+    db.session.commit()
+    
+    flash('Policy added successfully.', 'success')
+    return redirect(url_for('admin.e_admin_policies'))
+
+# 删除政策
+@admin_bp.route('/policy/<int:policy_id>/delete', methods=['POST'])
+
+def delete_policy(policy_id):
+    # 权限检查
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    policy = Policy.query.get_or_404(policy_id)
+    
+    # 如果有PDF文件，删除文件
+    if policy.pdf_path:
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], policy.pdf_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    
+    # 从数据库删除记录
+    db.session.delete(policy)
+    db.session.commit()
+    
+    flash('Policy deleted successfully.', 'success')
+    return redirect(url_for('admin.e_admin_policies'))
+
+# 获取单个政策信息（用于编辑）
+@admin_bp.route('/policy/<int:policy_id>', methods=['GET'])
+
+def get_policy(policy_id):
+    # 权限检查
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    policy = Policy.query.get_or_404(policy_id)
+    
+    return jsonify({
+        'title': policy.title,
+        'content': policy.content,
+        'created_at': policy.created_at.strftime('%Y-%m-%d'),
+        'updated_at': policy.updated_at.strftime('%Y-%m-%d'),
+        'has_pdf': bool(policy.pdf_path)
+    })
+
+# 更新政策
+@admin_bp.route('/policy/<int:policy_id>/update', methods=['POST'])
+
+def update_policy(policy_id):
+    # 权限检查
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    policy = Policy.query.get_or_404(policy_id)
+    
+    # 更新文本字段
+    policy.title = request.form.get('title')
+    policy.content = request.form.get('content')
+    policy.updated_at = datetime.now()
+    
+    # 处理新PDF文件上传（如果有）
+    if 'pdf_file' in request.files and request.files['pdf_file'].filename:
+        # 如果存在旧文件，删除它
+        if policy.pdf_path:
+            old_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], policy.pdf_path)
+            if os.path.exists(old_file_path):
+                os.remove(old_file_path)
+        
+        # 保存新文件
+        pdf_file = request.files['pdf_file']
+        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{pdf_file.filename}")
+        
+        # 确保目录存在
+        policies_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'policies')
+        if not os.path.exists(policies_dir):
+            os.makedirs(policies_dir)
+        
+        # 保存文件
+        file_path = os.path.join(policies_dir, filename)
+        pdf_file.save(file_path)
+        
+        # 更新文件路径
+        policy.pdf_path = os.path.join('policies', filename)
+    
+    # 保存更改
+    db.session.commit()
+    
+    flash('Policy updated successfully.', 'success')
+    return redirect(url_for('admin.e_admin_policies'))
+
+# 下载政策PDF文件
+@admin_bp.route('/policy/<int:policy_id>/download-pdf')
+
+def download_policy_pdf(policy_id):
+    policy = Policy.query.get_or_404(policy_id)
+    
+    if not policy.pdf_path:
+        flash('No PDF file available for this policy.', 'warning')
+        return redirect(url_for('admin.e_admin_policies'))
+    
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], policy.pdf_path)
+    
+    if not os.path.exists(file_path):
+        flash('PDF file not found.', 'error')
+        return redirect(url_for('admin.e_admin_policies'))
+    
+    # 提取文件名用于下载
+    filename = os.path.basename(policy.pdf_path)
+    
+    return send_file(
+        file_path,
+        download_name=filename,
+        as_attachment=True
+    )
