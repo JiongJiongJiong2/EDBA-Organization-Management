@@ -814,26 +814,28 @@ def submit_thesis_inquiry(service_id):
         flash('Please login first', 'warning')
         return redirect(url_for('auth.login'))
     
-    service = db.session.get(Service, service_id)
-    if not service:
+    # Get search service (the one passed in service_id)
+    search_service = db.session.get(Service, service_id)
+    if not search_service:
         flash('Service not found', 'error')
         return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
     
     try:
-        # Process payment first
-        success, error_message = process_payment(session['user_id'], service_id)
-        if not success:
-            flash(error_message, 'error')
-            return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+        # Process payment for search if needed
+        if 'search' in request.form:
+            success, error_message = process_payment(session['user_id'], service_id)
+            if not success:
+                flash(error_message, 'error')
+                return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
         data = {}
         if 'search' in request.form:
-            for field_name, field_type in service.input_json.items():
+            for field_name, field_type in search_service.input_json.items():
                 data[field_name] = request.form.get(field_name, '')
             
             # Construct query URL properly
-            service_url = service.url.rstrip('/')
-            service_path = service.path.lstrip('/')
+            service_url = search_service.url.rstrip('/')
+            service_path = search_service.path.lstrip('/')
             url = f"{service_url}/{service_path}"
             print(f"Sending search request to: {url}")
             
@@ -851,15 +853,41 @@ def submit_thesis_inquiry(service_id):
             return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
         elif 'download' in request.form:
-            for field_name, field_type in service.input_json.items():
+            # Get the download service for the same organization
+            download_service = db.session.execute(
+                db.select(Service)
+                .filter_by(organization_id=search_service.organization_id)
+                .filter_by(service_type='P')
+                .filter(Service.status.in_([2, 3]))
+            ).scalar_one_or_none()
+
+            if not download_service:
+                flash('Download service not available', 'error')
+                return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+
+            # Process payment for download
+            success, error_message = process_payment(session['user_id'], download_service.service_id)
+            if not success:
+                flash(error_message, 'error')
+                return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+
+            # Use the download service's input schema
+            for field_name, field_type in download_service.input_json.items():
                 data[field_name] = request.form.get(field_name, '')
+            
             # Construct query URL properly
-            service_url = service.url.rstrip('/')
-            service_path = service.path.lstrip('/')
+            service_url = download_service.url.rstrip('/')
+            service_path = download_service.path.lstrip('/')
             url = f"{service_url}/{service_path}"
             print(f"Sending download request to: {url}")
+            print(f"Download request data: {data}")
             
-            response = requests.post(url, json=data)
+            # Make sure to set the correct headers for PDF download
+            response = requests.post(
+                url,
+                json=data,
+                headers={'Accept': 'application/pdf'}
+            )
             print(f"Response status: {response.status_code}")
             print(f"Response content type: {response.headers.get('Content-Type', 'unknown')}")
 
