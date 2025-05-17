@@ -1,136 +1,181 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>Ask For Help</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Ask for Help</title>
     <style>
-        .message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-            display: none;
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .question-container {
-            margin-top: 30px;
-            border-top: 2px solid #eee;
-            padding-top: 20px;
-        }
-        .question-card {
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            padding: 15px;
+        }
+        .form-group {
             margin-bottom: 15px;
-            background-color: #fff;
         }
-        .question-status {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 0.9em;
-            margin-bottom: 10px;
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
         }
-        .status-pending {
-            background-color: #ffeeba;
-            color: #856404;
-        }
-        .status-answered {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .question-description {
-            margin: 10px 0;
-            font-size: 1.1em;
-        }
-        .question-answer {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f8f9fa;
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
             border-radius: 4px;
         }
-        .question-date {
-            font-size: 0.9em;
-            color: #6c757d;
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
         }
-        .section {
-            margin-bottom: 40px;
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+        }
+        .questions-section {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+        .status-pending {
+            background-color: #FFE0B2;
+            color: #E65100;
+        }
+        .status-answered {
+            background-color: #C8E6C9;
+            color: #2E7D32;
+        }
+        .time-info {
+            font-size: 0.9em;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div class="section">
-        <h2>Submit Your Question</h2>
-        <div id="messageBox" class="message"></div>
-        <form id="questionForm" method="post" action="{{ url_for('user.submit_question') }}">
-            <label for="description">Question Description:</label><br>
-            <textarea id="description" name="description" rows="4" cols="50" required></textarea><br><br>
-            <button type="submit">Submit</button>
-        </form>
-    </div>
-
-    {% if questions %}
-    <div class="question-container">
-        <h2>Your Previous Questions</h2>
-        {% for question in questions %}
-        <div class="question-card">
-            <div class="question-status {{ 'status-answered' if question.status == 1 else 'status-pending' }}">
-                {{ 'Answered' if question.status == 1 else 'Pending' }}
-            </div>
-            <div class="question-description">
-                {{ question.description }}
-            </div>
-            {% if question.status == 1 and question.answer %}
-            <div class="question-answer">
-                <strong>Answer:</strong><br>
-                {{ question.answer }}
-            </div>
-            {% endif %}
+    <div class="container">
+        <h1>Ask for Help</h1>
+        
+        <!-- Question Form -->
+        <div class="form-section">
+            <h2>Submit a Question</h2>
+            <form id="questionForm" onsubmit="submitQuestion(event)">
+                <div class="form-group">
+                    <label for="title">Question Title:</label>
+                    <input type="text" id="title" name="title" required maxlength="100" placeholder="Enter a brief title for your question">
+                </div>
+                <div class="form-group">
+                    <label for="description">Question Description:</label>
+                    <textarea id="description" name="description" required maxlength="255" placeholder="Describe your question in detail"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Question</button>
+            </form>
         </div>
-        {% endfor %}
+
+        <!-- Questions List -->
+        <div class="questions-section">
+            <h2>Your Questions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Submit Time</th>
+                        <th>Response Time</th>
+                        <th>Status</th>
+                        <th>Answer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for question in questions %}
+                    <tr>
+                        <td>{{ question.title }}</td>
+                        <td>{{ question.description }}</td>
+                        <td class="time-info">{{ question.submit_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td class="time-info">{{ question.response_time.strftime('%Y-%m-%d %H:%M:%S') if question.response_time else 'N/A' }}</td>
+                        <td>
+                            <span class="status {% if question.status == 1 %}status-answered{% else %}status-pending{% endif %}">
+                                {{ 'Answered' if question.status == 1 else 'Pending' }}
+                            </span>
+                        </td>
+                        <td>{{ question.answer if question.answer else 'Not answered yet' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    {% endif %}
-    
-    <br>
-    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
 
     <script>
-        document.getElementById('questionForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        function submitQuestion(event) {
+            event.preventDefault();
             
-            const formData = new FormData(this);
-            const messageBox = document.getElementById('messageBox');
-
-            fetch(this.action, {
+            const form = document.getElementById('questionForm');
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;  // Disable button while submitting
+            
+            fetch('/user/submit-question', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('Failed to parse response as JSON:', text);
+                        throw new Error('Invalid server response');
+                    }
+                });
+            })
             .then(data => {
-                messageBox.textContent = data.message;
-                messageBox.className = `message ${data.status === 'success' ? 'success' : 'error'}`;
-                messageBox.style.display = 'block';
-
+                console.log('Server response:', data);
                 if (data.status === 'success') {
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000); // Reload after 2 seconds to show the new question
+                    alert(data.message);
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert(data.message || 'An error occurred while submitting your question.');
                 }
             })
             .catch(error => {
-                messageBox.textContent = 'An error occurred while submitting the question';
-                messageBox.className = 'message error';
-                messageBox.style.display = 'block';
+                console.error('Error:', error);
+                alert('An error occurred while submitting your question. Please try again.');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;  // Re-enable button
             });
-        });
+        }
     </script>
 </body>
 </html>

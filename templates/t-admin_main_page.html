@@ -1,99 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Main Page</title>
-    <script>
-        const URLS = {
-            oConvenerUsers: "{{ url_for('admin.t_admin_users_a') }}",
-            eAdminUsers: "{{ url_for('admin.t_admin_users_b') }}",
-            seAdminUsers: "{{ url_for('admin.t_admin_users_c') }}",
-            tAdminUsers: "{{ url_for('admin.t_admin_users_d') }}",
-            answeredQuestions: "{{ url_for('admin.t_admin_question_a') }}",
-            unansweredQuestions: "{{ url_for('admin.t_admin_question_b') }}"
-        };
-
-        function loadContent(url) {
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    document.body.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error loading content:', error);
-                });
-        }
-    </script>
+    <title>T-Admin Dashboard</title>
     <style>
-        .card {
-            background-color: white;
+        .container {
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: transform 0.3s ease;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .card:hover {
-            transform: translateY(-10px);
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
         }
-        .o-convener {
-            border: 3px solid #FF6B6B;
+        .stat-card {
+            padding: 20px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        .e-admin {
-            border: 3px solid #4ECDC4;
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
         }
-        .se-admin {
-            border: 3px solid #45B7D1;
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
         }
-        .t-admin {
-            border: 3px solid #96CEB4;
+        .nav-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
         }
-        .answered-questions {
-            border: 3px solid #FFEEAD;
+        .nav-card {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
         }
-        .unanswered-questions {
-            border: 3px solid #D4A5A5;
+        .nav-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .card h3 {
-            margin-bottom: 10px;
+        .nav-card h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
         }
-        .card p {
+        .nav-card p {
+            margin: 0;
             color: #666;
         }
     </style>
 </head>
 <body>
-    <div style="width: 100%; height: 100%; padding: 20px;">
-        <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">Main Page</h2>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div class="card o-convener" onclick="loadContent(URLS.oConvenerUsers)">
-                <h3 style="color: #FF6B6B;">O-Convener</h3>
-                <p>Manage O-Convener users</p>
+    <div class="container">
+        <h1>T-Admin Dashboard</h1>
+        
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Unanswered Questions</h3>
+                <div class="stat-number">{{ unanswered_count }}</div>
             </div>
+            <div class="stat-card">
+                <h3>Answered Questions</h3>
+                <div class="stat-number">{{ answered_count }}</div>
+            </div>
+        </div>
+
+        <!-- Navigation Cards -->
+        <div class="nav-cards">
+            <a href="{{ url_for('admin.t_admin_question_b') }}" class="nav-card">
+                <h3>Unanswered Questions</h3>
+                <p>View and answer pending questions from users. These questions require your attention.</p>
+            </a>
             
-            <div class="card e-admin" onclick="loadContent(URLS.eAdminUsers)">
-                <h3 style="color: #4ECDC4;">E-Admin</h3>
-                <p>Manage E-Admin users</p>
-            </div>
+            <a href="{{ url_for('admin.t_admin_question_a') }}" class="nav-card">
+                <h3>Answered Questions</h3>
+                <p>Review previously answered questions and modify responses if needed.</p>
+            </a>
             
-            <div class="card se-admin" onclick="loadContent(URLS.seAdminUsers)">
-                <h3 style="color: #45B7D1;">SE-Admin</h3>
-                <p>Manage SE-Admin users</p>
-            </div>
-            
-            <div class="card t-admin" onclick="loadContent(URLS.tAdminUsers)">
-                <h3 style="color: #96CEB4;">T-Admin</h3>
-                <p>Manage T-Admin users</p>
-            </div>
-            
-            <div class="card answered-questions" onclick="loadContent(URLS.answeredQuestions)">
-                <h3 style="color: #FFEEAD;">Answered Questions</h3>
-                <p>View answered questions list</p>
-            </div>
-            
-            <div class="card unanswered-questions" onclick="loadContent(URLS.unansweredQuestions)">
-                <h3 style="color: #D4A5A5;">Unanswered Questions</h3>
-                <p>View unanswered questions list</p>
-            </div>
+            <a href="{{ url_for('admin.t_admin_user_management') }}" class="nav-card">
+                <h3>Admin Management</h3>
+                <p>Create and manage E-Admins and Senior E-Admins in organization 0.</p>
+            </a>
         </div>
     </div>
 </body>

@@ -1,95 +1,55 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Answered Questions List</title>
-    <script>
-        function handleSearch(event) {
-            event.preventDefault();
-            const searchQuery = document.querySelector('input[name="search"]').value;
-            const url = new URL(window.location.href);
-            url.searchParams.set('search', searchQuery);
-            
-            fetch(url.toString())
-                .then(response => response.text())
-                .then(html => {
-                    document.body.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error searching:', error);
-                });
-        }
-
-        function goBack() {
-            fetch("{{ url_for('admin.t_admin_main_page') }}")
-                .then(response => response.text())
-                .then(html => {
-                    document.body.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error returning to main page:', error);
-                });
-        }
-
-        function handleAnswerUpdate(event, questionId) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            const answer = form.querySelector('input[name="answer"]').value;
-            const url = "{{ url_for('admin.t_admin_update_answer', question_id='') }}" + questionId;
-            
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'answer=' + encodeURIComponent(answer)
-            })
-                .then(response => response.text())
-                .then(html => {
-                    document.body.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error updating answer:', error);
-                });
-        }
-    </script>
+    <title>T-Admin Answered Questions</title>
     <style>
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
         .search-form {
+            margin-bottom: 20px;
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
         }
         .search-input {
             flex: 1;
             padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
-        .search-button {
+        .btn {
             padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
             border: none;
             border-radius: 4px;
+            cursor: pointer;
+            color: white;
         }
-        .table-container {
-            height: calc(100% - 60px);
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        .btn-primary {
+            background-color: #4CAF50;
+        }
+        .btn-secondary {
+            background-color: #2196F3;
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
-        th {
+        th, td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
             position: sticky;
             top: 0;
-            background-color: #f2f2f2;
         }
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
+        .time-info {
+            font-size: 0.9em;
+            color: #666;
         }
         .answer-form {
             display: flex;
@@ -98,60 +58,60 @@
         .answer-input {
             flex: 1;
             padding: 8px;
-        }
-        .confirm-button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+            border: 1px solid #ddd;
             border-radius: 4px;
         }
     </style>
 </head>
 <body>
-    <div style="width: 100%; height: 100%; padding: 20px;">
-        <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">Answered Questions List</h2>
+    <div class="container">
+        <h1>Answered Questions</h1>
+        
         <div class="search-form">
-            <form onsubmit="handleSearch(event)">
-                <input type="text" name="search" placeholder="Search questions..." value="{{ search_query }}" class="search-input">
-                <button type="submit" class="search-button">Search</button>
-                <button type="button" onclick="goBack()" style="margin-left: 10px; background-color: #666; color: white; padding: 8px 16px; border: none; border-radius: 4px;">Back</button>
+            <form method="GET">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search questions..." class="search-input">
+                <button type="submit" class="btn btn-primary">Search</button>
             </form>
         </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Question ID</th>
-                        <th>Question Description</th>
-                        <th>Sender ID</th>
-                        <th>Sender Email</th>
-                        <th>Answer</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for question in questions %}
-                    <tr>
-                        <td>{{ question['question_id'] }}</td>
-                        <td>{{ question['description'] }}</td>
-                        <td>{{ question['sender_id'] }}</td>
-                        <td>{{ question['sender'] }}</td>
-                        <td>
-                            <form class="answer-form" 
-                                  data-question-id="{{ question['question_id'] }}"
-                                  onsubmit="handleAnswerUpdate(event, this.dataset.questionId)">
-                                <input type="text" name="answer" value="{{ question['answer'] }}" class="answer-input">
-                                <button type="submit" class="confirm-button">Save Answer</button>
-                            </form>
-                        </td>
-                        <td>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Submit Time</th>
+                    <th>Response Time</th>
+                    <th>Answer</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for question in questions %}
+                <tr>
+                    <td>{{ question.title }}</td>
+                    <td>{{ question.description }}</td>
+                    <td>{{ question.sender.email }}</td>
+                    <td>{{ question.sender.user_type }}</td>
+                    <td class="time-info">{{ question.submit_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="time-info">{{ question.response_time.strftime('%Y-%m-%d %H:%M:%S') if question.response_time else 'N/A' }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.t_admin_update_answer', question_id=question.question_id) }}" method="POST" class="answer-form">
+                            <input type="text" name="answer" value="{{ question.answer }}" class="answer-input" required>
+                            <button type="submit" class="btn btn-secondary">Update</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.t_admin_update_answer', question_id=question.question_id) }}" method="POST">
+                            <input type="hidden" name="answer" value="">
+                            <button type="submit" class="btn btn-primary">Mark as Unanswered</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </body>
 </html>

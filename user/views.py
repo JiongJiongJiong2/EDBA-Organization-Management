@@ -78,30 +78,66 @@ def ask_for_help():
 
 @user_bp.route('/submit-question', methods=['POST'])
 def submit_question():
+    # Debug logging
+    print("Received question submission request")
+    print("Session data:", dict(session))
+    print("Form data:", dict(request.form))
+
     if 'user_id' not in session:
+        print("Error: No user_id in session")
         return jsonify({'status': 'error', 'message': 'Please login first'})
 
+    title = request.form.get('title')
     description = request.form.get('description')
+    
+    # Validate input data
+    if not title:
+        print("Error: Missing title")
+        return jsonify({'status': 'error', 'message': 'Question title is required'})
     if not description:
+        print("Error: Missing description")
         return jsonify({'status': 'error', 'message': 'Question description is required'})
+        
+    # Check field lengths
+    if len(title) > 100:
+        print(f"Error: Title too long ({len(title)} chars)")
+        return jsonify({'status': 'error', 'message': 'Question title cannot exceed 100 characters'})
+    if len(description) > 255:
+        print(f"Error: Description too long ({len(description)} chars)")
+        return jsonify({'status': 'error', 'message': 'Question description cannot exceed 255 characters'})
 
     try:
+        # Debug logging
+        print(f"Creating new question for user {session['user_id']}")
+        print(f"Title: {title}")
+        print(f"Description: {description}")
+
         new_question = Question(
+            title=title,
             description=description,
             sender_id=session['user_id'],
             status=0,
-            answer=None
+            answer=None,
+            submit_time=db.func.current_timestamp()
         )
         db.session.add(new_question)
         db.session.commit()
+        
+        print("Question successfully added to database")
+        
         return jsonify({
             'status': 'success',
-            'message': 'Question has been sent',
+            'message': 'Question has been sent successfully',
             'redirect_url': url_for('user.dashboard', user_type=session.get('user_type'))
         })
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': 'Failed to submit question'})
+        error_msg = str(e)
+        print(f"Database error: {error_msg}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to submit question: {error_msg}'
+        })
 
 # 学生信息组织列表
 @user_bp.route('/organization-list-student/<service_type>', methods=['GET', 'POST'])
