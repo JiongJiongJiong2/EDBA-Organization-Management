@@ -831,12 +831,18 @@ def submit_thesis_inquiry(service_id):
         data = {}
         if 'search' in request.form:
             for field_name, field_type in search_service.input_json.items():
-                data[field_name] = request.form.get(field_name, '')
+                value = request.form.get(field_name, '')
+                data[field_name] = value
+                
+                # Store keywords for potential use in download
+                if field_name == 'keywords':
+                    session['search_keywords'] = value
             
             # Construct query URL properly
             service_url = search_service.url.rstrip('/')
             service_path = search_service.path.lstrip('/')
             url = f"{service_url}/{service_path}"
+            print(f"Search data: {data}")
             print(f"Sending search request to: {url}")
             
             response = requests.post(url, json=data)
@@ -845,6 +851,28 @@ def submit_thesis_inquiry(service_id):
             if response.status_code == 200:
                 result = response.json()
                 if result:
+                    # Store thesis ID and metadata in session
+                    if isinstance(result, dict):
+                        # Store thesis title for download
+                        session['thesis_title'] = result.get('title')
+                        print(f"Stored thesis title: {session['thesis_title']}")
+                        
+                        # Get download service schema
+                        download_service = db.session.execute(
+                            db.select(Service)
+                            .filter_by(organization_id=search_service.organization_id)
+                            .filter_by(service_type='P')
+                            .filter(Service.status.in_([2, 3]))
+                        ).scalar_one_or_none()
+                        
+                        if download_service:
+                            # Store download service info
+                            session['download_service_id'] = download_service.service_id
+                            if download_service.input_json:
+                                print(f"Download service input schema: {download_service.input_json}")
+                                result['_download_params'] = download_service.input_json
+                    
+                    print(f"Search result with metadata: {result}")
                     session['inquiry_result'] = result
                 else:
                     session['inquiry_result'] = "No matching thesis found."
@@ -871,9 +899,30 @@ def submit_thesis_inquiry(service_id):
                 flash(error_message, 'error')
                 return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
-            # Use the download service's input schema
-            for field_name, field_type in download_service.input_json.items():
-                data[field_name] = request.form.get(field_name, '')
+            # Initialize download data
+            data = {}
+            
+            # Try to get title from session first
+            title = session.get('thesis_title')
+            print(f"Title from session: {title}")
+            
+            # If not in session, try to get from form
+            if not title:
+                title = request.form.get('title')
+                print(f"Title from form: {title}")
+            
+            if title:
+                data['title'] = title
+                print(f"Using title for download: {data['title']}")
+            else:
+                flash('Missing thesis title for download', 'error')
+                return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+                    
+            # Include search keywords if available
+            if session.get('search_keywords'):
+                data['keywords'] = session.get('search_keywords')
+
+            print(f"Using search parameters: {data}")
             
             # Construct query URL properly
             service_url = download_service.url.rstrip('/')
@@ -882,16 +931,62 @@ def submit_thesis_inquiry(service_id):
             print(f"Sending download request to: {url}")
             print(f"Download request data: {data}")
             
-            # Make sure to set the correct headers for PDF download
-            response = requests.post(
+            # Set appropriate headers for PDF download
+            headers = {
+                'Accept': 'application/pdf',
+                'Content-Type': 'application/json'
+            }
+            
+            print(f"Sending download request with headers: {headers}")
+            print(f"Download URL: {url}")
+            print(f"Download data: {data}")
+            
+            # Use GET request for downloading with URL parameters
+            response = requests.get(
                 url,
-                json=data,
-                headers={'Accept': 'application/pdf'}
+                params=data,  # Send data as URL parameters
+                headers=headers,
+                stream=True   # Keep streaming for large files
             )
+            print(f"Download GET request URL: {response.url}")  # Log the full URL with parameters
+            
+            print(f"Download response headers: {response.headers}")
+            print(f"Download response content type: {response.headers.get('Content-Type')}")
+            print(f"Download response content length: {response.headers.get('Content-Length')}")
             print(f"Response status: {response.status_code}")
             print(f"Response content type: {response.headers.get('Content-Type', 'unknown')}")
 
-            if response.status_code == 200:
+            # Analyze response
+            content_type = response.headers.get('Content-Type', '').lower()
+            print(f"Analyzing response: content-type={content_type}")
+
+            # Try to interpret as JSON first
+            try:
+                json_data = response.json()
+                print("Response appears to be JSON:", json_data)
+                flash('Download failed: Service returned JSON instead of PDF', 'error')
+                return redirect(url_for('user.thesis_inquiry', service_id=service_id))
+            except:
+                # Not JSON, proceed with PDF check
+                print("Response is not JSON, checking for PDF content")
+
+            # Check if response appears to be a PDF
+            is_pdf = (
+                response.status_code == 200 and
+                (
+                    'pdf' in content_type or 
+                    response.content.startswith(b'%PDF-') or
+                    len(response.content) > 1024  # PDFs are typically larger than 1KB
+                )
+            )
+            
+            print(f"PDF check result: {is_pdf}")
+            print(f"Content starts with: {response.content[:20]}")
+
+            if is_pdf:
+                print("Response appears to be a valid PDF")
+                
+                # Get filename from Content-Disposition or use default
                 filename = 'thesis.pdf'
                 content_disposition = response.headers.get('Content-Disposition')
                 if content_disposition:
@@ -901,8 +996,20 @@ def submit_thesis_inquiry(service_id):
                         filename = filename_match.group(1).strip('"\'')
                 if not filename.lower().endswith('.pdf'):
                     filename += '.pdf'
-
+                
+                print(f"Using filename: {filename}")
+                print(f"Content length: {len(response.content)} bytes")
+                
+                # Create file object from response content
                 file_obj = io.BytesIO(response.content)
+                
+                # Verify file object has content
+                file_size = file_obj.getbuffer().nbytes
+                print(f"File object size: {file_size} bytes")
+                
+                if file_size == 0:
+                    raise Exception("Received empty file")
+                
                 return send_file(
                     file_obj,
                     mimetype='application/pdf',
