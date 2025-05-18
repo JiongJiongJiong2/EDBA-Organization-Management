@@ -2,47 +2,184 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Data user Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .fund-display {
+            background-color: #e8f5e9;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .logout-button {
+            background-color: #f44336;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .logout-button:hover {
+            background-color: #d32f2f;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card-title {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1976d2;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #1565c0;
+        }
+        .button.secondary {
+            background-color: #78909c;
+        }
+        .button.secondary:hover {
+            background-color: #607d8b;
+        }
+        form {
+            margin-bottom: 10px;
+        }
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            .user-details {
+                align-items: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Welcome, {{ user.email }}!</h2><br><br>
-    <p>You are {{ user.user_type }}, and your fund is {{ user.fund }}</p><br><br>
-    
-    <!-- Button actions for the user -->
-    <form action="{{ url_for('user.ask_for_help') }}" method="get" style="display: inline;">
-        <button type="submit">Help</button>
-    </form><br><br>
+    <div class="header">
+        <div class="user-info">
+            <div class="user-details">
+                <h2>Welcome, {{ user.email }}!</h2>
+                <span>Role: {{ user.user_type }}</span>
+                <div class="fund-display">Available Fund: {{ user.fund }}</div>
+            </div>
+            <form action="{{ url_for('auth.logout') }}" method="post">
+                <button type="submit" class="logout-button">Logout</button>
+            </form>
+        </div>
+    </div>
 
-    <form action="{{ url_for('user.course_info_check') }}" method="get" style="display: inline;">
-        <button type="submit" name="course_info">Course Information</button>
-    </form><br><br>
+    <div class="dashboard-grid">
+        <!-- Common Functions -->
+        <div class="card">
+            <h3 class="card-title">Common Functions</h3>
+            <form action="{{ url_for('user.course_info_check') }}" method="get">
+                <button class="button" type="submit" name="course_info">Course Information</button>
+            </form>
+            <form action="{{ url_for('user.organization_list_thesis', service_type='S') }}" method="get">
+                <button class="button" type="submit" name="search_thesis">Search Thesis</button>
+            </form>
+            <form action="{{ url_for('user.ask_for_help') }}" method="get">
+                <button class="button secondary" type="submit">Get Help</button>
+            </form>
+        </div>
 
-    <form action="{{ url_for('user.organization_list_thesis', service_type='S') }}" method="get" style="display: inline;">
-        <button type="submit" name="search_thesis">Search Thesis</button>
-    </form><br><br>
+        <!-- Student Services -->
+        {% if user.user_type != 'PC' %}
+        <div class="card">
+            <h3 class="card-title">Student Services</h3>
+            <form action="{{ url_for('user.organization_list_student', service_type='A') }}" method="get">
+                <button class="button" type="submit" name="student_identification">Student Identification</button>
+            </form>
+            <form action="{{ url_for('user.organization_list_student', service_type='R') }}" method="get">
+                <button class="button" type="submit" name="student_gpa">Student GPA</button>
+            </form>
+        </div>
+        {% endif %}
 
-    {% if user.user_type != 'PC' %}
-        <form action="{{ url_for('user.organization_list_student', service_type='A') }}" method="get" style="display: inline;">
-            <button type="submit" name="student_identification">Student Identification</button>
-        </form><br><br>
-        <form action="{{ url_for('user.organization_list_student', service_type='R') }}" method="get" style="display: inline;">
-            <button type="submit" name="student_gpa">Student GPA</button>
-        </form><br><br>
-    {% endif %}
+        <!-- PP User Functions -->
+        {% if user.user_type == 'PP' %}
+        <div class="card">
+            <h3 class="card-title">Management Tools</h3>
+            <form action="{{ url_for('oconvener.configuration_interface', organization_id=user.organization_id) }}" method="get">
+                <button class="button" type="submit">Configuration Interface</button>
+            </form>
+            <form action="{{ url_for('user.provide_course_info') }}" method="get">
+                <button class="button" type="submit">Provide Course Information</button>
+            </form>
+        </div>
+        {% endif %}
 
-    {% if user.user_type == 'PP' %}
-        <form action="{{ url_for('oconvener.configuration_interface', organization_id=user.organization_id) }}" method="get" style="display: inline;">
-            <button type="configuration_interface">Configuration Interface</button>
-        </form><br><br>
-
-        <form action="{{ url_for('user.provide_course_info') }}" method="get" style="display: inline;">
-            <button type="submit">Provide Course Information</button>
-        </form><br><br>
-    {% endif %}
-    {% if user.user_type in ['EE', 'SE'] %}
-        <form action="{{ url_for('admin.admin_applications') }}" method="get" style="display: inline;">
-            <button type="submit">Manage Applications</button>
-        </form><br><br>
-    {% endif %}
+        <!-- Admin Functions -->
+        {% if user.user_type in ['EE', 'SE'] %}
+        <div class="card">
+            <h3 class="card-title">Administration</h3>
+            <form action="{{ url_for('admin.admin_applications') }}" method="get">
+                <button class="button" type="submit">Manage Applications</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
 </body>
 </html>

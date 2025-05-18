@@ -37,6 +37,13 @@ def get_latest_policy():
     })
 
 # 生成验证码
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    """Handle user logout"""
+    session.clear()  # Clear all session data
+    flash('Successfully logged out', 'success')
+    return redirect(url_for('auth.login'))
+
 def generate_verification_code(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
