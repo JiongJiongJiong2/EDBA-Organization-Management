@@ -199,6 +199,7 @@
                         <th>E-Admin Review</th>
                         <th>Review Time</th>
                         <th>Documents</th>
+                        <th>Notes</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -213,10 +214,20 @@
                             </a>
                         </td>
                         <td>{{ app.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                        <td>{{ app.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td>
-                            {% set review_time = app.e_admin_approval_date - app.created_at %}
-                            {{ review_time.days }} days, {{ (review_time.seconds//3600) }} hours
+                            {% if app.e_admin_approval_date %}
+                                {{ app.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if app.e_admin_approval_date %}
+                                {% set review_time = app.e_admin_approval_date - app.created_at %}
+                                {{ review_time.days }} days, {{ (review_time.seconds//3600) }} hours
+                            {% else %}
+                                -
+                            {% endif %}
                         </td>
                         <td>
                             {% for doc in app.documents %}
@@ -227,12 +238,17 @@
                             {% endfor %}
                         </td>
                         <td>
+                            <textarea name="notes" rows="2" style="width: 200px; margin-bottom: 5px;" placeholder="Add review notes here"></textarea>
+                        </td>
+                        <td>
                             <form action="{{ url_for('admin.se_admin_approve_application', app_id=app.application_id) }}" 
                                   method="POST" style="display: inline;">
+                                <input type="hidden" name="notes" class="note-input">
                                 <button type="submit" class="btn btn-success">Approve</button>
                             </form>
                             <form action="{{ url_for('admin.se_admin_reject_application', app_id=app.application_id) }}" 
                                   method="POST" style="display: inline;">
+                                <input type="hidden" name="notes" class="note-input">
                                 <button type="submit" class="btn btn-danger">Reject</button>
                             </form>
                         </td>
@@ -242,5 +258,16 @@
             </table>
         </div>
     </div>
+    <script>
+        // Sync notes to hidden inputs before form submission
+        document.querySelectorAll('textarea[name="notes"]').forEach(textarea => {
+            textarea.addEventListener('input', (e) => {
+                const row = e.target.closest('tr');
+                row.querySelectorAll('.note-input').forEach(input => {
+                    input.value = e.target.value;
+                });
+            });
+        });
+    </script>
 </body>
 </html>

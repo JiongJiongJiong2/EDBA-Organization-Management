@@ -301,14 +301,86 @@ def se_admin_approve_application(app_id):
         flash('没有权限访问此页面', 'error')
         return redirect(url_for('auth.login'))
 
-    application = db.session.get(Application, app_id)
-    if application:
+    try:
+        application = db.session.get(Application, app_id)
+        if not application:
+            flash('Application not found', 'error')
+            return redirect(url_for('admin.se_admin_applications'))
+
+        # Verify application is in correct state
+        if application.status != 1:
+            flash('Cannot approve application - invalid status', 'error')
+            return redirect(url_for('admin.se_admin_applications'))
+
+        # Get notes from the form
+        notes = request.form.get('notes', '').strip()
+
+        # Create a new organization
+        organization = Organization(
+            name=application.organization_name
+        )
+        db.session.add(organization)
+        db.session.flush()  # Get the organization_id
+
+        # Create O-Convener member for the organization
+        oc_member = Member(
+            email=application.email,
+            user_type='OC',
+            organization_id=organization.organization_id,
+            fund=50  # Default fund value
+        )
+        db.session.add(oc_member)
+        db.session.flush()  # Ensure member is created before workspace
+
+        # Create a new workspace
+        workspace = Workspace(
+            organization_id=organization.organization_id,
+            name=f"{application.organization_name}'s Workspace",
+            status='active'
+        )
+        db.session.add(workspace)
+        db.session.flush()  # Get the workspace_id
+
+        # Update application
         application.status = 3  # SE-Admin Approved
         application.se_admin_review_date = datetime.now()
-        db.session.commit()
-        flash('Application has been approved successfully', 'success')
-    else:
-        flash('Application not found', 'error')
+        application.se_admin_notes = notes
+        application.workspace_id = workspace.workspace_id
+        
+        try:
+            db.session.commit()
+            
+            # Verify changes were saved
+            db.session.refresh(application)
+            if (application.status != 3 or
+                not application.se_admin_review_date or
+                not application.workspace_id):
+                raise Exception("Changes were not saved correctly")
+
+            # Send email notification
+            email_subject = "O-Convener Application Approved"
+            email_body = f"""Dear Applicant,
+
+Your application for organization '{application.organization_name}' has been approved by the SE Administrator.
+
+A workspace has been created for your organization. You can now log in to access your workspace.
+
+Notes from the SE Administrator:
+{notes if notes else 'No additional notes provided.'}
+
+Best regards,
+The Administration Team"""
+            
+            send_email(application.email, email_subject, email_body)
+                
+            flash('Application has been approved successfully', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving approval: {str(e)}', 'error')
+            print(f"Database error during SE admin approval: {str(e)}")
+    except Exception as e:
+        flash(f'Error processing approval: {str(e)}', 'error')
+        print(f"Error in SE admin approval route: {str(e)}")
     
     return redirect(url_for('admin.se_admin_applications'))
 
@@ -323,14 +395,57 @@ def se_admin_reject_application(app_id):
         flash('没有权限访问此页面', 'error')
         return redirect(url_for('auth.login'))
 
-    application = db.session.get(Application, app_id)
-    if application:
+    try:
+        application = db.session.get(Application, app_id)
+        if not application:
+            flash('Application not found', 'error')
+            return redirect(url_for('admin.se_admin_applications'))
+
+        # Verify application is in correct state
+        if application.status != 1:
+            flash('Cannot reject application - invalid status', 'error')
+            return redirect(url_for('admin.se_admin_applications'))
+
+        # Get notes from the form
+        notes = request.form.get('notes', '').strip()
+
+        # Update application
         application.status = 4  # SE-Admin Rejected
         application.se_admin_review_date = datetime.now()
-        db.session.commit()
-        flash('Application has been rejected', 'info')
-    else:
-        flash('Application not found', 'error')
+        application.se_admin_notes = notes
+        
+        try:
+            db.session.commit()
+            
+            # Verify changes were saved
+            db.session.refresh(application)
+            if application.status != 4 or not application.se_admin_review_date:
+                raise Exception("Changes were not saved correctly")
+                
+            # Send email notification
+            email_subject = "O-Convener Application Not Approved"
+            email_body = f"""Dear Applicant,
+
+Your application for organization '{application.organization_name}' has not been approved by the SE Administrator.
+
+Feedback from the SE Administrator:
+{notes if notes else 'No specific reason provided.'}
+
+You may submit a new application addressing the feedback provided.
+
+Best regards,
+The Administration Team"""
+            
+            send_email(application.email, email_subject, email_body)
+                
+            flash('Application has been rejected', 'info')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving rejection: {str(e)}', 'error')
+            print(f"Database error during SE admin rejection: {str(e)}")
+    except Exception as e:
+        flash(f'Error processing rejection: {str(e)}', 'error')
+        print(f"Error in SE admin rejection route: {str(e)}")
     
     return redirect(url_for('admin.se_admin_applications'))
 
@@ -372,6 +487,7 @@ def approve_application(app_id):
     application = db.session.get(Application, app_id)
     if application:
         application.status = 1  # Approved
+        application.e_admin_approval_date = datetime.now()
         db.session.commit()
         flash('Application approved successfully', 'success')
     else:
