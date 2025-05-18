@@ -21,6 +21,33 @@
             width: 80px;
             margin-right: 10px;
         }
+        .organization-item {
+            padding: 15px;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .organization-name {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .access-button {
+            padding: 8px 16px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .access-button:hover {
+            background-color: #1565c0;
+        }
     </style>
 </head>
 <body>
@@ -116,12 +143,12 @@
         </script>
     {% elif organizations %}
         {% for org in organizations %}
-            <div style="margin: 10px 0;">
-                {{ org.name }}
-                <form action="{{ url_for('user.organization_list_student', service_type=request.view_args.service_type) }}" method="post" style="display: inline;">
+            <div class="organization-item">
+                <span class="organization-name">{{ org.name }}</span>
+                <form action="{{ url_for('user.organization_list_student', service_type=service_type) }}" method="post" style="display: inline;">
                     <input type="hidden" name="organization_id" value="{{ org.organization_id }}">
                     <input type="hidden" name="user_id" value="{{ user_id }}">
-                    <button type="submit" name="access">Access</button>
+                    <button type="submit" name="access" class="access-button" onclick="logAccess('{{ org.name }}')">Access Service</button>
                 </form>
             </div>
         {% endfor %}
@@ -131,5 +158,23 @@
     
     <br>
     <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+
+    <script>
+        function logAccess(orgName) {
+            console.log('Accessing service for organization:', orgName);
+        }
+
+        // Add form submission logging
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const orgId = this.querySelector('input[name="organization_id"]').value;
+                    console.log('Form submitted for organization ID:', orgId);
+                    console.log('Service type:', '{{ service_type }}');
+                });
+            });
+        });
+    </script>
 </body>
 </html>

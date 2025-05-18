@@ -200,19 +200,32 @@ def organization_list_student(service_type):
     # For other users, show organization list
     if request.method == 'POST':
         organization_id = request.form.get('organization_id')
+        print(f"POST request received - Organization ID: {organization_id}")
+        print(f"Service type: {service_type}")
+        print(f"User type: {user.user_type}")
+        
         if organization_id:
             # For PC and CC users, only show released services
             if user.user_type in ['PC', 'CC']:
                 status_filter = 3
             else:
                 status_filter = 2
-
-            service = db.session.execute(
-                db.select(Service)
-                .filter(Service.organization_id == organization_id)
-                .filter(Service.service_type == service_type)
-                .filter(Service.status == status_filter)
-            ).scalar_one_or_none()
+            
+            print(f"Status filter: {status_filter}")
+            
+            # Debug query before execution
+            query = db.select(Service).filter(
+                Service.organization_id == organization_id,
+                Service.service_type == service_type,
+                Service.status.in_([2, 3])
+            )
+            print(f"Service query: {query}")
+            
+            service = db.session.execute(query).scalar_one_or_none()
+            print(f"Found service: {service}")
+            print(f"Service details: ID={service.service_id if service else None}, "
+                  f"Type={service.service_type if service else None}, "
+                  f"Status={service.status if service else None}")
             
             if service:
                 return redirect(url_for('user.student_inquiry', service_id=service.service_id))
