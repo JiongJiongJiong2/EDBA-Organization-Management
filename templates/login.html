@@ -5,6 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EDBA System Login</title>
     <style>
+        html {
+            --s: 140px; /* control the size */
+            --c1: #AB3E5B;
+            --c2: #FFBE40;
+            
+            --_g: 
+                #0000 25%,#0008 47%,var(--c1) 53% 147%,var(--c2) 153% 247%,
+                var(--c1) 253% 347%,var(--c2) 353% 447%,var(--c1) 453% 547%,#0008 553%,#0000 575%;
+            --_s: calc(25%/3) calc(25%/4) at 50%; 
+            background:
+                radial-gradient(var(--_s) 100%,var(--_g)),
+                radial-gradient(var(--_s) 100%,var(--_g)) calc(var(--s)/2) calc(3*var(--s)/4),
+                radial-gradient(var(--_s) 0   ,var(--_g)) calc(var(--s)/2) 0,
+                radial-gradient(var(--_s) 0   ,var(--_g)) 0                calc(3*var(--s)/4),
+                repeating-linear-gradient(90deg,#ACCEC0 calc(25%/-6) calc(25%/6),#61A6AB 0 calc(25%/2));
+            background-size: var(--s) calc(3*var(--s)/2);
+            animation: m 2.5s infinite linear;
+        }
+
+        @keyframes m {
+            to {
+                background-position:
+                    var(--s) 0,
+                    calc(var(--s)/-2) calc(3*var(--s)/4),
+                    calc(3*var(--s)/2) 0,
+                    calc(-1*var(--s)) calc(3*var(--s)/4),
+                    0 0
+            }
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -12,17 +42,17 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f5f5f5;
             font-family: Arial, sans-serif;
         }
 
         .login-container {
-            background-color: white;
+            background-color: rgba(255, 255, 255, 0.95);
             padding: 2rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
+            backdrop-filter: blur(5px);
         }
 
         .logo {
