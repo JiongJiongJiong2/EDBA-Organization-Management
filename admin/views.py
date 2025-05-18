@@ -284,11 +284,11 @@ def se_admin_applications():
         flash('没有权限访问此页面', 'error')
         return redirect(url_for('auth.login'))
 
-    # Get applications approved by E-Admin
+    # Get all applications that have been processed by SE-Admin and those pending review
     applications = db.session.execute(
         db.select(Application)
-        .filter_by(status=1)  # Status 1 means approved by E-Admin
-        .order_by(Application.created_at.desc())
+        .filter(Application.status.in_([1, 3, 4]))  # Status 1: E-Admin approved (pending), 3: SE-Admin approved, 4: SE-Admin rejected
+        .order_by(Application.se_admin_review_date.desc(), Application.created_at.desc())
     ).scalars().all()
 
     return render_template('se_admin_applications.html', 
@@ -379,8 +379,9 @@ Best regards,
 The Administration Team"""
             
             send_email(application.email, email_subject, email_body)
-                
-            flash('Application has been approved successfully', 'success')
+            
+            # Return JSON response for AJAX
+            return jsonify({'status': 'success', 'message': 'Application has been approved successfully'})
         except Exception as e:
             db.session.rollback()
             flash(f'Error saving approval: {str(e)}', 'error')
@@ -445,7 +446,8 @@ The Administration Team"""
             
             send_email(application.email, email_subject, email_body)
                 
-            flash('Application has been rejected', 'info')
+            # Return JSON response for AJAX
+            return jsonify({'status': 'success', 'message': 'Application has been rejected successfully'})
         except Exception as e:
             db.session.rollback()
             flash(f'Error saving rejection: {str(e)}', 'error')

@@ -159,6 +159,32 @@
             color: #856404;
             border: 1px solid #ffeeba;
         }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 13px;
+            display: inline-block;
+        }
+
+        .status-badge.approved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-badge.rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-badge.pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
     </style>
 </head>
 <body>
@@ -176,7 +202,7 @@
 
     <div class="container">
         <h2 class="page-title">O-Convener Applications Review</h2>
-        <p class="page-desc">Review applications that have been approved by E-Admin. Please carefully examine each application before making a decision.</p>
+        <p class="page-desc">View and manage O-Convener applications - including both pending applications and previously processed ones.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -200,12 +226,13 @@
                         <th>Review Time</th>
                         <th>Documents</th>
                         <th>Notes</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for app in applications %}
-                    <tr>
+                    <tr id="application-{{ app.application_id }}">
                         <td>#{{ app.application_id }}</td>
                         <td><strong>{{ app.organization_name }}</strong></td>
                         <td>
@@ -240,17 +267,30 @@
                         <td>
                             <textarea name="notes" rows="2" style="width: 200px; margin-bottom: 5px;" placeholder="Add review notes here"></textarea>
                         </td>
-                        <td>
-                            <form action="{{ url_for('admin.se_admin_approve_application', app_id=app.application_id) }}" 
-                                  method="POST" style="display: inline;">
-                                <input type="hidden" name="notes" class="note-input">
-                                <button type="submit" class="btn btn-success">Approve</button>
-                            </form>
-                            <form action="{{ url_for('admin.se_admin_reject_application', app_id=app.application_id) }}" 
-                                  method="POST" style="display: inline;">
-                                <input type="hidden" name="notes" class="note-input">
-                                <button type="submit" class="btn btn-danger">Reject</button>
-                            </form>
+                        <td class="status-cell">
+                            {% if app.status == 3 %}
+                            <span class="status-badge approved">Approved</span>
+                            {% elif app.status == 4 %}
+                            <span class="status-badge rejected">Rejected</span>
+                            {% else %}
+                            <span class="status-badge pending">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions-cell">
+                            {% if app.status not in [3, 4] %}
+                            <div class="action-buttons">
+                                <form action="{{ url_for('admin.se_admin_approve_application', app_id=app.application_id) }}" 
+                                      method="POST" style="display: inline;" class="approval-form">
+                                    <input type="hidden" name="notes" class="note-input">
+                                    <button type="submit" class="btn btn-success">Approve</button>
+                                </form>
+                                <form action="{{ url_for('admin.se_admin_reject_application', app_id=app.application_id) }}" 
+                                      method="POST" style="display: inline;" class="rejection-form">
+                                    <input type="hidden" name="notes" class="note-input">
+                                    <button type="submit" class="btn btn-danger">Reject</button>
+                                </form>
+                            </div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -266,6 +306,57 @@
                 row.querySelectorAll('.note-input').forEach(input => {
                     input.value = e.target.value;
                 });
+            });
+        });
+
+        // Handle form submissions
+        document.querySelectorAll('.approval-form, .rejection-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const row = form.closest('tr');
+                const notes = row.querySelector('textarea[name="notes"]').value;
+                const formData = new FormData(form);
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        // Update UI
+                        const actionCell = row.querySelector('.actions-cell');
+                        const statusCell = row.querySelector('.status-cell');
+                        const isApproval = form.classList.contains('approval-form');
+                        
+                        // Update status badge
+                        statusCell.innerHTML = `
+                            <span class="status-badge ${isApproval ? 'approved' : 'rejected'}">
+                                ${isApproval ? 'Approved' : 'Rejected'}
+                            </span>
+                        `;
+                        
+                        // Hide action buttons
+                        actionCell.querySelector('.action-buttons').style.display = 'none';
+                        
+                        // Show success message
+                        const message = document.createElement('div');
+                        message.className = `alert alert-${isApproval ? 'success' : 'info'}`;
+                        message.textContent = `Application ${isApproval ? 'approved' : 'rejected'} successfully`;
+                        document.querySelector('.container').insertBefore(message, document.querySelector('.table-container'));
+                        
+                        // Scroll message into view
+                        message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        throw new Error('Failed to process request');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    const message = document.createElement('div');
+                    message.className = 'alert alert-error';
+                    message.textContent = 'An error occurred while processing your request';
+                    document.querySelector('.container').insertBefore(message, document.querySelector('.table-container'));
+                }
             });
         });
     </script>
