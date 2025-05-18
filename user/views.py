@@ -88,7 +88,7 @@ def dashboard(user_type):
     elif user_type == 'EE':
         return render_template('e_admin_main.html', user=member)
     elif user_type == 'SE':
-        return render_template('se_admin_user_management.html', user=member)
+        return redirect(url_for('admin.se_admin_main'))
     elif user_type == 'OC':
         return render_template('oc_main.html', user=member)
     else:

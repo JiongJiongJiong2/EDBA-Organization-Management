@@ -246,7 +246,81 @@ def se_admin_main():
         flash('没有权限访问此页面', 'error')
         print(f"Access denied for user type: {user_type}")  # Debug log
         return redirect(url_for('auth.login'))
-    return render_template('se_admin_user_management.html')
+
+    # Get count of pending applications
+    pending_count = db.session.execute(
+        db.select(db.func.count(Application.application_id))
+        .filter_by(status=1)  # Status 1 means approved by E-Admin
+    ).scalar()
+    
+    return render_template('se_admin_main_page.html', pending_count=pending_count)
+
+@admin_bp.route('/se_admin/applications')
+def se_admin_applications():
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        return redirect(url_for('auth.login'))
+
+    # Get applications approved by E-Admin
+    applications = db.session.execute(
+        db.select(Application)
+        .filter_by(status=1)  # Status 1 means approved by E-Admin
+        .order_by(Application.created_at.desc())
+    ).scalars().all()
+
+    return render_template('se_admin_applications.html', 
+                         applications=applications,
+                         now=datetime.now(),
+                         timedelta=timedelta)
+
+@admin_bp.route('/se_admin/applications/<int:app_id>/approve', methods=['POST'])
+def se_admin_approve_application(app_id):
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        return redirect(url_for('auth.login'))
+
+    application = db.session.get(Application, app_id)
+    if application:
+        application.status = 3  # SE-Admin Approved
+        application.se_admin_review_date = datetime.now()
+        db.session.commit()
+        flash('Application has been approved successfully', 'success')
+    else:
+        flash('Application not found', 'error')
+    
+    return redirect(url_for('admin.se_admin_applications'))
+
+@admin_bp.route('/se_admin/applications/<int:app_id>/reject', methods=['POST'])
+def se_admin_reject_application(app_id):
+    if 'user_id' not in session:
+        flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    user_type = session.get('user_type', '').upper()
+    if user_type not in ['SE', 'SE-ADMIN']:
+        flash('没有权限访问此页面', 'error')
+        return redirect(url_for('auth.login'))
+
+    application = db.session.get(Application, app_id)
+    if application:
+        application.status = 4  # SE-Admin Rejected
+        application.se_admin_review_date = datetime.now()
+        db.session.commit()
+        flash('Application has been rejected', 'info')
+    else:
+        flash('Application not found', 'error')
+    
+    return redirect(url_for('admin.se_admin_applications'))
 
 # E-Admin Routes
 # 修改后的 e_admin_applications 函数
