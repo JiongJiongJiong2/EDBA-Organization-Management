@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: #1e88e5;
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .organization-info {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .user-info {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-button {
+            background-color: white;
+            color: #1e88e5;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-1px);
+        }
+
+        .logout-button {
+            background-color: transparent;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: 1px solid white;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .logout-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .service-type {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e88e5;
+        }
+
+        .service-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-inactive {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .service-form {
+            margin-top: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #1e88e5;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox-group label {
+            margin-left: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background: #1e88e5;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #1976d2;
+        }
+
+        .flash-messages {
+            margin-bottom: 1rem;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .flash-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .flash-error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-info">
+                <h1>Service Management</h1>
+                <div class="organization-info">Organization: {{ user.organization.name }}</div>
+                <div class="user-info">Account: {{ user.email }}</div>
+            </div>
+            <div class="header-buttons">
+                <a href="{{ url_for('oconvener.workspace') }}" class="back-button">Back to Dashboard</a>
+                <form action="{{ url_for('auth.logout') }}" method="post" style="display: inline;">
+                    <button type="submit" class="logout-button">Logout</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="service-grid">
+            {% for service in services %}
+                <div class="service-card">
+                    <div class="service-header">
+                        <span class="service-type">
+                            {% if service.service_type == 'M' %}
+                                Money Transfer
+                            {% elif service.service_type == 'S' %}
+                                Thesis Search
+                            {% elif service.service_type == 'P' %}
+                                PDF Download
+                            {% elif service.service_type == 'C' %}
+                                Course Information
+                            {% elif service.service_type == 'A' %}
+                                Student Authentication
+                            {% elif service.service_type == 'R' %}
+                                Student GPA Record
+                            {% endif %}
+                        </span>
+                        <span class="service-status {{ 'status-active' if service.status == 1 else 'status-inactive' }}">
+                            {{ 'Active' if service.status == 1 else 'Inactive' }}
+                        </span>
+                    </div>
+
+                    <form class="service-form" action="{{ url_for('oconvener.update_service_status', service_id=service.service_id) }}" method="post">
+                        <div class="form-group">
+                            <label>Status:</label>
+                            <select name="status" class="form-control">
+                                <option value="0" {{ 'selected' if service.status == 0 else '' }}>Inactive</option>
+                                <option value="1" {{ 'selected' if service.status == 1 else '' }}>Active</option>
+                            </select>
+                        </div>
+
+                        {% if service.service_type in ['S', 'P', 'C', 'A', 'R'] %}
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="is_paid_{{ service.service_id }}" name="is_paid" 
+                                       {% if service.cost > 0 %}checked{% endif %}>
+                                <label for="is_paid_{{ service.service_id }}">Paid Service</label>
+                            </div>
+
+                            <div class="form-group" id="cost_group_{{ service.service_id }}">
+                                <label>Price:</label>
+                                <input type="number" name="cost" class="form-control" 
+                                       value="{{ service.cost }}" min="0"
+                                       {{ '' if service.cost > 0 else 'disabled' }}>
+                            </div>
+                        {% endif %}
+
+                        <button type="submit" class="btn btn-primary">Update Service</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        // Enable/disable cost input based on checkbox
+        document.querySelectorAll('input[type="checkbox"][name="is_paid"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const serviceId = this.id.split('_')[2];
+                const costInput = document.querySelector(`#cost_group_${serviceId} input`);
+                costInput.disabled = !this.checked;
+                if (!this.checked) {
+                    costInput.value = '0';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -162,7 +162,7 @@
         {% if user.user_type == 'PP' %}
         <div class="card">
             <h3 class="card-title">Management Tools</h3>
-            <form action="{{ url_for('oconvener.configuration_interface', organization_id=user.organization_id) }}" method="get">
+            <form action="{{ url_for('oconvener.manage_services', organization_id=user.organization_id) }}" method="get">
                 <button class="button" type="submit">Configuration Interface</button>
             </form>
             <form action="{{ url_for('user.provide_course_info') }}" method="get">

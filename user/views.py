@@ -156,7 +156,7 @@ def dashboard(user_type):
     elif user_type == 'SE':
         return render_template('se_admin_user_management.html', user=member)
     elif user_type == 'OC':
-        return render_template('oc_workspace_oc-workspace.html', user=member)
+        return render_template('oc_main.html', user=member)
     else:
         return render_template('dashboard_data_user.html', user=member)
 
