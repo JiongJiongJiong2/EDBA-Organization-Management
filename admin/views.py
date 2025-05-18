@@ -239,12 +239,15 @@ def se_admin_main():
         flash('请先登录', 'error')
         return redirect(url_for('auth.login'))
 
+    # 获取当前用户信息
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('用户信息不存在', 'error')
+        return redirect(url_for('auth.login'))
+
     user_type = session.get('user_type', '').upper()
-    print(f"Current user type: {user_type}")  # Debug log
-    
     if user_type not in ['SE', 'SE-ADMIN']:
         flash('没有权限访问此页面', 'error')
-        print(f"Access denied for user type: {user_type}")  # Debug log
         return redirect(url_for('auth.login'))
 
     # Get count of pending applications
@@ -253,12 +256,20 @@ def se_admin_main():
         .filter_by(status=1)  # Status 1 means approved by E-Admin
     ).scalar()
     
-    return render_template('se_admin_main_page.html', pending_count=pending_count)
+    return render_template('se_admin_main_page.html', 
+                         user=user,
+                         pending_count=pending_count)
 
 @admin_bp.route('/se_admin/applications')
 def se_admin_applications():
     if 'user_id' not in session:
         flash('请先登录', 'error')
+        return redirect(url_for('auth.login'))
+
+    # 获取当前用户信息
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('用户信息不存在', 'error')
         return redirect(url_for('auth.login'))
 
     user_type = session.get('user_type', '').upper()
@@ -274,6 +285,7 @@ def se_admin_applications():
     ).scalars().all()
 
     return render_template('se_admin_applications.html', 
+                         user=user,
                          applications=applications,
                          now=datetime.now(),
                          timedelta=timedelta)
@@ -330,6 +342,12 @@ def e_admin_applications():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # 获取当前用户信息
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('用户信息不存在', 'error')
+        return redirect(url_for('auth.login'))
+    
     # Get all applications
     applications = db.session.execute(
         db.select(Application)
@@ -340,6 +358,7 @@ def e_admin_applications():
     from datetime import datetime, timedelta
     
     return render_template('e_admin_applications.html', 
+                         user=user,
                          applications=applications,
                          now=datetime.now(),
                          timedelta=timedelta)  # 将 timedelta 类传递给模板
@@ -395,11 +414,19 @@ def bank_settings():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # 获取当前用户信息
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('用户信息不存在', 'error')
+        return redirect(url_for('auth.login'))
+    
     bank_account = db.session.execute(
         db.select(EDBankAccount).order_by(EDBankAccount.account_id.desc()).limit(1)
     ).scalar()
     
-    return render_template('e_admin_bank_settings.html', bank_account=bank_account)
+    return render_template('e_admin_bank_settings.html', 
+                         user=user,
+                         bank_account=bank_account)
 
 @admin_bp.route('/e_admin/bank-settings/update', methods=['POST'])
 def update_bank_account():
@@ -450,9 +477,17 @@ def e_admin_policies():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # 获取当前用户信息
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('用户信息不存在', 'error')
+        return redirect(url_for('auth.login'))
+    
     # 获取所有政策
     policies = Policy.query.all()
-    return render_template('e_admin_policies.html', policies=policies)
+    return render_template('e_admin_policies.html', 
+                         user=user,
+                         policies=policies)
 
 # 添加新政策
 @admin_bp.route('/policy/add', methods=['POST'])

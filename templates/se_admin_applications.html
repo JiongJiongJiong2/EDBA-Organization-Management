@@ -1,191 +1,246 @@
-<div style="width: 100%; height: 100%; padding: 20px;">
-    <h2 style="margin-bottom: 20px; color: #333; font-size: 24px;">O-Convener Applications Review</h2>
-    <p style="margin-bottom: 15px; color: #666;">
-        Applications approved by E-Admin awaiting final review. Please carefully review each application and associated documents before making a decision.
-    </p>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}" style="margin-bottom: 20px; padding: 10px; border-radius: 4px; {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <div style="margin-bottom: 20px;">
-        <form method="GET" style="display: flex; gap: 10px;">
-            <input type="text" name="search" placeholder="Search applications..." value="{{ search_query }}" 
-                   style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-            <button type="submit" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">
-                Search
-            </button>
-        </form>
-    </div>
-
-    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead style="background-color: #f8f9fa;">
-                <tr>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">ID</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Organization</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Applicant Email</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Submission Date</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">E-Admin Review</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Review Time</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Documents</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for app in applications %}
-                <tr>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">#{{ app.application_id }}</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        <strong>{{ app.organization_name }}</strong>
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        <a href="mailto:{{ app.email }}" style="color: #007bff; text-decoration: none;">
-                            {{ app.email }}
-                        </a>
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        {{ app.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        {{ app.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') }}
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        {% set review_time = app.e_admin_approval_date - app.created_at %}
-                        {{ review_time.days }} days, {{ (review_time.seconds//3600) }} hours
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                        {% for doc in app.documents %}
-                        <a href="{{ url_for('admin.download_document', doc_id=doc.id) }}" 
-                           style="color: #007bff; text-decoration: none; display: block; margin-bottom: 5px;">
-                            {{ doc.original_filename }}
-                        </a>
-                        {% endfor %}
-                    </td>
-                    <td style="padding: 15px; border-bottom: 1px solid #dee2e6;">
-                    <button onclick="showActionModal({{ app.application_id }}, 'approve', event)"
-                                style="padding: 6px 12px; margin-right: 5px; background-color: #28a745; color: white; 
-                                       border: none; border-radius: 4px; cursor: pointer;">
-                            Approve
-                        </button>
-                        <button onclick="showActionModal({{ app.application_id }}, 'reject', event)"
-                                style="padding: 6px 12px; background-color: #dc3545; color: white; 
-                                       border: none; border-radius: 4px; cursor: pointer;">
-                            Reject
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal for approve/reject actions -->
-<div id="actionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                            background-color: rgba(0,0,0,0.5); z-index: 1000;">
-    <div style="position: relative; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                background-color: white; padding: 20px; border-radius: 8px; width: 500px;">
-        <h3 id="modalTitle" style="margin-top: 0; margin-bottom: 20px;"></h3>
-        <form id="actionForm" method="POST">
-            <div style="margin-bottom: 20px;">
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Application Review</label>
-                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                        <p><strong>Organization Name:</strong> <span id="modalOrgName"></span></p>
-                        <p><strong>Applicant Email:</strong> <span id="modalEmail"></span></p>
-                        <p><strong>Submission Date:</strong> <span id="modalSubmissionDate"></span></p>
-                        <p><strong>E-Admin Review Date:</strong> <span id="modalReviewDate"></span></p>
-                    </div>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label for="notes" style="display: block; margin-bottom: 5px; font-weight: bold;">Review Notes:</label>
-                    <textarea id="notes" name="notes" rows="4" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                              placeholder="Enter your review notes and any specific instructions or concerns..."></textarea>
-                </div>
-                <div id="workspaceSection" style="display: none; background-color: #e8f5e9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                    <p style="margin: 0; font-weight: bold; color: #2e7d32;">A workspace will be created for this organization upon approval.</p>
-                </div>
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="closeModal()"
-                        style="padding: 8px 16px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Cancel
-                </button>
-                <button type="submit"
-                        style="padding: 8px 16px; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                    Confirm
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function showActionModal(applicationId, action, event) {
-    const modal = document.getElementById('actionModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalOrgName = document.getElementById('modalOrgName');
-    const modalEmail = document.getElementById('modalEmail');
-    const modalSubmissionDate = document.getElementById('modalSubmissionDate');
-    const modalReviewDate = document.getElementById('modalReviewDate');
-    const workspaceSection = document.getElementById('workspaceSection');
-    const actionForm = document.getElementById('actionForm');
-    const submitButton = actionForm.querySelector('button[type="submit"]');
-
-    // Get application data from the table row
-    const row = event.target.closest('tr');
-    if (row) {
-        modalOrgName.textContent = row.cells[1].querySelector('strong').textContent;
-        modalEmail.textContent = row.cells[2].querySelector('a').textContent;
-        modalSubmissionDate.textContent = row.cells[3].textContent.trim();
-        modalReviewDate.textContent = row.cells[4].textContent.trim();
-    }
-
-    modalTitle.textContent = action === 'approve' ? 'Approve O-Convener Application' : 'Reject O-Convener Application';
-    
-    // Show workspace section only for approval
-    workspaceSection.style.display = action === 'approve' ? 'block' : 'none';
-    
-    try {
-        // Set the correct form action URL using Flask's url_for
-        let baseApproveUrl = "{{ url_for('admin.se_admin_approve_application', app_id=0) }}";
-        let baseRejectUrl = "{{ url_for('admin.se_admin_reject_application', app_id=0) }}";
-        
-        // Replace the app_id placeholder in the URL
-        if (action === 'approve') {
-            actionForm.action = baseApproveUrl.replace('0', applicationId);
-            console.log('Setting approve URL:', actionForm.action);
-        } else {
-            actionForm.action = baseRejectUrl.replace('0', applicationId);
-            console.log('Setting reject URL:', actionForm.action);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O-Convener Applications Review</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
         }
-    } catch (error) {
-        console.error('Error setting form action:', error);
-        alert('Error setting up the form. Please refresh the page and try again.');
-    }
-    
-    submitButton.style.backgroundColor = action === 'approve' ? '#28a745' : '#dc3545';
-    submitButton.textContent = action === 'approve' ? 'Approve' : 'Reject';
 
-    modal.style.display = 'block';
-}
+        .header {
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
 
-function closeModal() {
-    document.getElementById('actionModal').style.display = 'none';
-}
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
 
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('actionModal');
-    if (event.target == modal) {
-        closeModal();
-    }
-}
-</script>
+        .user-details {
+            color: #333;
+        }
+
+        .user-details h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .user-details p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .logout-btn {
+            padding: 8px 16px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+
+        .logout-btn:hover {
+            opacity: 0.9;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .page-desc {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 500;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        .table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            margin-right: 5px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="user-info">
+            <div class="user-details">
+                <h3>{{ user.email }}</h3>
+                <p>SE Administrator</p>
+            </div>
+        </div>
+        <form action="{{ url_for('auth.logout') }}" method="POST" style="display: inline;">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2 class="page-title">O-Convener Applications Review</h2>
+        <p class="page-desc">Review applications that have been approved by E-Admin. Please carefully examine each application before making a decision.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Organization</th>
+                        <th>Applicant Email</th>
+                        <th>Submission Date</th>
+                        <th>E-Admin Review</th>
+                        <th>Review Time</th>
+                        <th>Documents</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>#{{ app.application_id }}</td>
+                        <td><strong>{{ app.organization_name }}</strong></td>
+                        <td>
+                            <a href="mailto:{{ app.email }}" style="color: #007bff; text-decoration: none;">
+                                {{ app.email }}
+                            </a>
+                        </td>
+                        <td>{{ app.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ app.e_admin_approval_date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            {% set review_time = app.e_admin_approval_date - app.created_at %}
+                            {{ review_time.days }} days, {{ (review_time.seconds//3600) }} hours
+                        </td>
+                        <td>
+                            {% for doc in app.documents %}
+                            <a href="{{ url_for('admin.download_document', doc_id=doc.id) }}" 
+                               style="color: #007bff; text-decoration: none; display: block; margin-bottom: 5px;">
+                                {{ doc.original_filename }}
+                            </a>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <form action="{{ url_for('admin.se_admin_approve_application', app_id=app.application_id) }}" 
+                                  method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-success">Approve</button>
+                            </form>
+                            <form action="{{ url_for('admin.se_admin_reject_application', app_id=app.application_id) }}" 
+                                  method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-danger">Reject</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
