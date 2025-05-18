@@ -52,7 +52,7 @@
     <!-- Payment Information -->
     <div class="payment-info">
         <h4>Payment Information</h4>
-        <p>Your current fund: <strong>{{ user.fund }}</strong></p>
+        <p>Your current fund: <strong id="userFund">{{ user.fund }}</strong></p>
         <p>Search cost: <strong>{{ service.cost }}</strong></p>
         {% for s in service.organization.services %}
             {% if s.service_type == 'P' %}
@@ -145,5 +145,32 @@
     
     <br>
     <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+
+    <script>
+    // Function to update the fund balance
+    async function updateFundBalance() {
+        try {
+            const response = await fetch("{{ url_for('user.get_fund_balance') }}");
+            if (!response.ok) {
+                throw new Error('Failed to fetch fund balance');
+            }
+            const data = await response.json();
+            document.getElementById('userFund').textContent = data.fund;
+        } catch (error) {
+            console.error('Error updating fund balance:', error);
+        }
+    }
+
+    // Add event listeners to forms for both search and download
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form[action*="submit-thesis-inquiry"]');
+        forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                // Set a small delay to ensure the payment has been processed
+                setTimeout(updateFundBalance, 1000);
+            });
+        });
+    });
+    </script>
 </body>
 </html>

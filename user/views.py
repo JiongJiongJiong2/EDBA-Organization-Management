@@ -1124,6 +1124,15 @@ def edit_course(course_id):
     
     return redirect(url_for('user.provide_course_info'))
 
+@user_bp.route('/get-fund-balance')
+@validate_session
+def get_fund_balance():
+    """Endpoint to get current user's fund balance"""
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify({'fund': user.fund})
+
 @user_bp.route('/delete-course/<int:course_id>', methods=['POST'])
 def delete_course(course_id):
     """Delete a course"""
