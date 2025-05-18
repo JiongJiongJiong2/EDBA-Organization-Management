@@ -30,7 +30,7 @@ def get_service_or_404(service_id):
     return service
 
 def process_payment(user_id, service_id, query_count=1):
-    """Process payment for a service"""
+    """Process payment by deducting from user's fund"""
     try:
         # Debug logging
         print(f"Processing payment for user {user_id}, service {service_id}, query count {query_count}")
@@ -51,73 +51,6 @@ def process_payment(user_id, service_id, query_count=1):
             print("Error: Insufficient funds")
             return False, "Your fund is not enough! Please connect with your O-convener."
             
-        # Get payment service for both organizations
-        payment_service_from = db.session.execute(
-            db.select(Service)
-            .filter_by(organization_id=user.organization_id)
-            .filter_by(service_type='M')
-            .filter_by(status=2)
-        ).scalar_one_or_none()
-        
-        payment_service_to = db.session.execute(
-            db.select(Service)
-            .filter_by(organization_id=service.organization_id)
-            .filter_by(service_type='M')
-            .filter_by(status=2)
-        ).scalar_one_or_none()
-        
-        print(f"Payment services - From: {payment_service_from}, To: {payment_service_to}")
-        
-        if not payment_service_from or not payment_service_to:
-            print("Error: Payment service not configured")
-            return False, "Payment service configuration not completed! Please connect with your O-convener."
-            
-        # Get bank accounts
-        from_bank = db.session.execute(
-            db.select(BankAccount)
-            .filter_by(organization_id=user.organization_id)
-        ).scalar_one_or_none()
-        
-        to_bank = db.session.execute(
-            db.select(BankAccount)
-            .filter_by(organization_id=service.organization_id)
-        ).scalar_one_or_none()
-        
-        print(f"Bank accounts - From: {from_bank}, To: {to_bank}")
-        
-        if not from_bank or not to_bank:
-            print("Error: Bank accounts not configured")
-            return False, "Payment service configuration not completed! Please connect with your O-convener."
-            
-        # Prepare payment data
-        payment_data = {
-            "from_bank": from_bank.bank,
-            "from_name": from_bank.name,
-            "from_account": from_bank.number,
-            "password": from_bank.password,
-            "to_bank": to_bank.bank,
-            "to_name": to_bank.name,
-            "to_account": to_bank.number,
-            "amount": total_cost
-        }
-        
-        # Construct payment URL
-        payment_url = payment_service_from.url.rstrip('/') + '/' + payment_service_from.path.lstrip('/')
-        print(f"Sending payment request to: {payment_url}")
-        
-        # Send payment request
-        response = requests.post(payment_url, json=payment_data)
-        print(f"Payment response: {response.text}")
-        
-        try:
-            response_data = response.json()
-            if response_data.get("status") != "success":
-                print(f"Payment failed: {response_data}")
-                return False, "Payment failure! Please connect with your O-convener."
-        except Exception as e:
-            print(f"Error parsing payment response: {e}")
-            return False, "Payment system error! Please connect with your O-convener."
-            
         # Update user's fund
         user.fund -= total_cost
         db.session.commit()
@@ -127,6 +60,7 @@ def process_payment(user_id, service_id, query_count=1):
         
     except Exception as e:
         db.session.rollback()
+        print(f"Payment error: {str(e)}")
         return False, f"Payment error: {str(e)}"
 
 user_bp = Blueprint('user', __name__)
@@ -288,13 +222,20 @@ def organization_list_student(service_type):
     # Filter services based on user type
     query = db.select(Organization).join(Service).filter(Service.service_type == service_type)
     
+    print(f"User type: {user.user_type}")  # Debug log
+    
     # PC and CC users can only see released services
     if user.user_type in ['PC', 'CC']:
         query = query.filter(Service.status == 3)
     else:
-        query = query.filter(Service.status == 2)
-
+        # Modified to allow access to both configured and released services
+        query = query.filter(Service.status.in_([2, 3]))
+    
+    # Debug logs
+    print(f"Service type: {service_type}")
+    print(f"Query: {query}")
     organizations = db.session.execute(query.distinct()).scalars().all()
+    print(f"Found organizations: {[org.name for org in organizations]}")
     
     return render_template('organization_list_student.html', 
                            organizations=organizations, 
@@ -761,13 +702,17 @@ def organization_list_thesis(service_type):
             else:
                 status_filter = 2
 
+            print(f"Processing thesis service access - Organization ID: {organization_id}")
+            print(f"User type: {user.user_type}, Status filter: {status_filter}")
+
             service = db.session.execute(
                 db.select(Service)
                 .filter(Service.organization_id == organization_id)
                 .filter(Service.service_type == service_type)
-                .filter(Service.status == status_filter)
+                .filter(Service.status.in_([2, 3]))  # Allow both configured and released services
             ).scalar_one_or_none()
             
+            print(f"Found service: {service}")
             if service:
                 return redirect(url_for('user.thesis_inquiry', service_id=service.service_id))
             else:
@@ -776,13 +721,18 @@ def organization_list_thesis(service_type):
     # Filter services based on user type
     query = db.select(Organization).join(Service).filter(Service.service_type == service_type)
     
+    print(f"User type: {user.user_type}")  # Debug log
+    print(f"Service type: {service_type}")  # Debug log
+    
     # PC and CC users can only see released services
     if user.user_type in ['PC', 'CC']:
         query = query.filter(Service.status == 3)
     else:
-        query = query.filter(Service.status == 2)
-
+        # Modified to allow access to both configured and released services
+        query = query.filter(Service.status.in_([2, 3]))
+    
     organizations = db.session.execute(query.distinct()).scalars().all()
+    print(f"Found organizations: {[org.name for org in organizations]}")  # Debug log
     
     return render_template('organization_list_thesis.html', 
                            organizations=organizations, 
@@ -846,37 +796,71 @@ def submit_thesis_inquiry(service_id):
             print(f"Sending search request to: {url}")
             
             response = requests.post(url, json=data)
-            print(f"Response status: {response.status_code}")
-            print(f"Response content: {response.text}")
-            if response.status_code == 200:
-                result = response.json()
-                if result:
-                    # Store thesis ID and metadata in session
-                    if isinstance(result, dict):
-                        # Store thesis title for download
-                        session['thesis_title'] = result.get('title')
-                        print(f"Stored thesis title: {session['thesis_title']}")
-                        
-                        # Get download service schema
-                        download_service = db.session.execute(
-                            db.select(Service)
-                            .filter_by(organization_id=search_service.organization_id)
-                            .filter_by(service_type='P')
-                            .filter(Service.status.in_([2, 3]))
-                        ).scalar_one_or_none()
-                        
-                        if download_service:
-                            # Store download service info
-                            session['download_service_id'] = download_service.service_id
-                            if download_service.input_json:
-                                print(f"Download service input schema: {download_service.input_json}")
-                                result['_download_params'] = download_service.input_json
+            print(f"Search Request URL: {url}")
+            print(f"Search Request Data: {data}")
+            print(f"Search Response Status: {response.status_code}")
+            print(f"Search Response Content: {response.text}")
+
+            try:
+                result = response.json() if response.status_code == 200 else None
+                print(f"Search Result Type: {type(result)}")
+                print(f"Search Result: {result}")
+
+                # Initialize debug info
+                debug_info = {
+                    'type': type(result).__name__,
+                    'raw_response': response.text[:500]
+                }
+
+                if result is None:
+                    session['inquiry_result'] = {'error': 'No result returned from service'}
+                elif isinstance(result, list) and len(result) > 0:
+                    # For list results, extract and format titles
+                    first_thesis = result[0]  # Get first result for potential download
+                    titles = []
+                    for thesis in result:
+                        if thesis.get('title'):
+                            titles.append(thesis['title'])
+                    
+                    if titles:
+                        # Store first title for download
+                        session['thesis_title'] = first_thesis['title']
+                        # Show all titles
+                        session['inquiry_result'] = "\n".join(titles)
+                    else:
+                        session['inquiry_result'] = "Invalid thesis data"
+                elif isinstance(result, dict):
+                    # Add metadata about the response
+                    debug_info['fields'] = list(result.keys())
+                    result['_debug'] = debug_info
+                    
+                    # Store thesis title for download if present
+                    title = result.get('title')
+                    if title:
+                        session['thesis_title'] = title
+                        print(f"Stored thesis title: {title}")
+
+                    # Get download service schema
+                    download_service = db.session.execute(
+                        db.select(Service)
+                        .filter_by(organization_id=search_service.organization_id)
+                        .filter_by(service_type='P')
+                        .filter(Service.status.in_([2, 3]))
+                    ).scalar_one_or_none()
+                    
+                    if download_service:
+                        # Store download service info
+                        session['download_service_id'] = download_service.service_id
+                        if download_service.input_json:
+                            print(f"Download service input schema: {download_service.input_json}")
+                            result['_download_params'] = download_service.input_json
                     
                     print(f"Search result with metadata: {result}")
                     session['inquiry_result'] = result
                 else:
                     session['inquiry_result'] = "No matching thesis found."
-            else:
+            except Exception as e:
+                print(f"Error processing search response: {e}")
                 session['inquiry_result'] = f"Error: {response.status_code} - {response.text}"
             return redirect(url_for('user.thesis_inquiry', service_id=service_id))
 
