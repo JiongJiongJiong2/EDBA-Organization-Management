@@ -188,7 +188,7 @@ def add_member():
         
         if user_type not in ['PP', 'PC', 'CC']:
             flash('Invalid user type', 'error')
-        return redirect(url_for('oconvener.list_a'))
+            return redirect(url_for('oconvener.list_a'))
         
         existing_member = db.session.execute(
             db.select(Member).filter_by(email=email)

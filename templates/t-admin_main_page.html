@@ -61,27 +61,17 @@
     <div class="container">
         <h1>T-Admin Dashboard</h1>
         
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Unanswered Questions</h3>
-                <div class="stat-number">{{ unanswered_count }}</div>
-            </div>
-            <div class="stat-card">
-                <h3>Answered Questions</h3>
-                <div class="stat-number">{{ answered_count }}</div>
-            </div>
-        </div>
+        
 
         <!-- Navigation Cards -->
         <div class="nav-cards">
             <a href="{{ url_for('admin.t_admin_question_b') }}" class="nav-card">
-                <h3>Unanswered Questions</h3>
+                <h3>Unanswered</h3>
                 <p>View and answer pending questions from users. These questions require your attention.</p>
             </a>
             
             <a href="{{ url_for('admin.t_admin_question_a') }}" class="nav-card">
-                <h3>Answered Questions</h3>
+                <h3>Answered</h3>
                 <p>Review previously answered questions and modify responses if needed.</p>
             </a>
             
