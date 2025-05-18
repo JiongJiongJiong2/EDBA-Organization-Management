@@ -2,81 +2,183 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Thesis Inquiry</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thesis Search and Download</title>
     <style>
-        .inquiry-section {
-            margin: 20px 0;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
             padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
         .payment-info {
-            margin: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #f8f9fa;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .fund-item {
+            background-color: #e8f5e9;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #2e7d32;
+            font-weight: 500;
+        }
+        .cost-item {
+            background-color: #e3f2fd;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #1565c0;
+            font-weight: 500;
+        }
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: #1976d2;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
         }
         .form-group {
             margin: 15px 0;
         }
         .form-group label {
-            display: inline-block;
-            width: 100px;
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
         }
         .form-group input {
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            width: 250px;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            border-color: #1976d2;
+            outline: none;
         }
         .button {
             display: inline-block;
-            padding: 8px 16px;
-            margin: 5px;
-            background-color: #4CAF50;
+            padding: 12px 24px;
+            background-color: #1976d2;
             color: white;
-            text-decoration: none;
-            border-radius: 4px;
             border: none;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s;
         }
         .button:hover {
-            background-color: #45a049;
+            background-color: #1565c0;
+        }
+        .result-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .thesis-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .thesis-title {
+            color: #1976d2;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .thesis-detail {
+            margin: 5px 0;
+            color: #666;
+        }
+        .debug-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1976d2;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .back-link:hover {
+            color: #1565c0;
+        }
+        @media (max-width: 768px) {
+            .payment-info {
+                flex-direction: column;
+            }
+            .form-group label {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <h2>Thesis Search and Download</h2>
-    
-    <!-- Payment Information -->
-    <div class="payment-info">
-        <h4>Payment Information</h4>
-        <p>Your current fund: <strong id="userFund">{{ user.fund }}</strong></p>
-        <p>Search cost: <strong>{{ service.cost }}</strong></p>
-        {% for s in service.organization.services %}
-            {% if s.service_type == 'P' %}
-                <p>Download cost: <strong>{{ s.cost }}</strong></p>
-            {% endif %}
-        {% endfor %}
+    <div class="header">
+        <h2>Thesis Search and Download</h2>
+        <div class="payment-info">
+            <div class="fund-item">
+                Current Fund: <strong id="userFund">{{ user.fund }}</strong>
+            </div>
+            <div class="cost-item">
+                Search Cost: <strong>{{ service.cost }}</strong>
+            </div>
+            {% for s in service.organization.services %}
+                {% if s.service_type == 'P' %}
+                    <div class="cost-item">
+                        Download Cost: <strong>{{ s.cost }}</strong>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- Search Form -->
-    <div class="inquiry-section">
-        <h3>Search Thesis</h3>
+    <div class="section">
+        <h3 class="section-title">Search Thesis</h3>
         <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post">
             <div class="form-group">
                 <label for="keywords">Keywords:</label>
-                <input type="text" id="keywords" name="keywords" required>
+                <input type="text" id="keywords" name="keywords" required placeholder="Enter search keywords">
             </div>
             <button type="submit" name="search" class="button">Search</button>
         </form>
     </div>
 
-    <!-- Download Form -->
-    <div class="inquiry-section">
-        <h3>Download Thesis</h3>
-        <p style="color: gray; margin-bottom: 10px;">You can either search for a thesis first or enter thesis details directly below:</p>
+    <div class="section">
+        <h3 class="section-title">Download Thesis</h3>
+        <p style="color: #666; margin-bottom: 15px;">You can either search for a thesis first or enter thesis details directly below:</p>
         <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post">
             {% for service in service.organization.services %}
                 {% if service.service_type == 'P' %}
@@ -94,60 +196,42 @@
         </form>
     </div>
 
-
-    <!-- 显示结果 -->
     {% if result %}
-        <h3>Search Results:</h3>
-        <div style="margin: 20px 0;">
+        <div class="result-section">
+            <h3 class="section-title">Search Results</h3>
             {% if result is string %}
-                <p>{{ result }}</p>
+                <div class="thesis-result">{{ result }}</div>
             {% elif result is mapping %}
-                <div class="debug-info" style="margin: 10px 0; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
-                    <h4>Debug Information:</h4>
-                    <ul style="list-style: none; margin: 0; padding: 0;">
-                        <li>Response Type: {{ result.__class__.__name__ }}</li>
-                        <li>Available Fields: {{ result.keys() | list }}</li>
-                        <li>Content:</li>
-                    </ul>
-                    <pre style="white-space: pre-wrap; margin-top: 10px; background-color: #fff; padding: 10px; border-radius: 4px;">{{ result | tojson(indent=2) }}</pre>
-                </div>
-                
+                <div class="thesis-result">
                     {% for key, value in result.items() if key not in ['_download_params'] %}
-                    <p><strong>{{ key }}:</strong> {{ value }}</p>
-                    {% if key == 'title' %}
-                        <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post">
-                            <!-- No need for this hidden field as we're using the value directly in _download_params -->
-                            <!-- Required fields from download schema -->
-                            {% if result.get('_download_params') %}
-                                {% for field_name, field_type in result.get('_download_params', {}).items() %}
-                                    {% if field_name == 'title' %}
-                                        <input type="hidden" name="title" value="{{ value }}">
-                                    {% else %}
-                                        <input type="hidden" name="{{ field_name }}" value="{{ result.get(field_name, '') }}">
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                            <div style="margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
-                                <p style="color: gray; font-size: 0.9em;">Debug Info:</p>
-                                <p style="color: gray; font-size: 0.9em;">Thesis Title: {{ session.get('thesis_title') }}</p>
-                                <p style="color: gray; font-size: 0.9em;">Download Parameters: {{ result.get('_download_params', {}) }}</p>
-                                <p style="color: gray; font-size: 0.9em;">Available Fields: {{ result.keys() | list }}</p>
-                            </div>
-                            <button type="submit" name="download" class="button">Download</button>
-                        </form>
-                    {% endif %}
-                {% endfor %}
+                        <div class="thesis-detail">
+                            <strong>{{ key|title }}:</strong> {{ value }}
+                        </div>
+                        {% if key == 'title' %}
+                            <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post" style="margin-top: 15px;">
+                                {% if result.get('_download_params') %}
+                                    {% for field_name, field_type in result.get('_download_params', {}).items() %}
+                                        {% if field_name == 'title' %}
+                                            <input type="hidden" name="title" value="{{ value }}">
+                                        {% else %}
+                                            <input type="hidden" name="{{ field_name }}" value="{{ result.get(field_name, '') }}">
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                <button type="submit" name="download" class="button">Download This Thesis</button>
+                            </form>
+                        {% endif %}
+                    {% endfor %}
+                </div>
             {% else %}
-                <p>{{ result }}</p>
+                <div class="thesis-result">{{ result }}</div>
             {% endif %}
         </div>
     {% endif %}
     
-    <br>
-    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}" class="back-link">← Back to Dashboard</a>
 
     <script>
-    // Function to update the fund balance
     async function updateFundBalance() {
         try {
             const response = await fetch("{{ url_for('user.get_fund_balance') }}");
@@ -161,12 +245,10 @@
         }
     }
 
-    // Add event listeners to forms for both search and download
     document.addEventListener('DOMContentLoaded', function() {
         const forms = document.querySelectorAll('form[action*="submit-thesis-inquiry"]');
         forms.forEach(form => {
             form.addEventListener('submit', function() {
-                // Set a small delay to ensure the payment has been processed
                 setTimeout(updateFundBalance, 1000);
             });
         });

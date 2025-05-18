@@ -2,27 +2,121 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thesis Organization List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .user-info {
+            color: #666;
+            margin-top: 10px;
+        }
+        .org-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .org-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .org-card:hover {
+            transform: translateY(-2px);
+        }
+        .org-name {
+            font-size: 1.2em;
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+        .access-button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        .access-button:hover {
+            background-color: #1565c0;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: #666;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1976d2;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .back-link:hover {
+            color: #1565c0;
+        }
+        @media (max-width: 768px) {
+            .org-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Organizations list for Thesis Search</h2>
-    <p>Welcome, {{ user.email }}!</p><br><br>
+    <div class="header">
+        <h2>Thesis Search Organizations</h2>
+        <div class="user-info">Welcome, {{ user.email }}!</div>
+    </div>
+
     {% if organizations %}
-        {% for org in organizations %}
-            <div style="margin: 10px 0;">
-                {{ org.name }}
-                <form action="{{ url_for('user.organization_list_thesis', service_type=request.view_args.service_type) }}" method="post" style="display: inline;">
-                    <input type="hidden" name="organization_id" value="{{ org.organization_id }}">
-                    <input type="hidden" name="user_id" value="{{ user_id }}">
-                    <button type="submit" name="access">Access</button>
-                </form>
-            </div>
-        {% endfor %}
+        <div class="org-grid">
+            {% for org in organizations %}
+                <div class="org-card">
+                    <div class="org-name">{{ org.name }}</div>
+                    <form action="{{ url_for('user.organization_list_thesis', service_type=request.view_args.service_type) }}" method="post">
+                        <input type="hidden" name="organization_id" value="{{ org.organization_id }}">
+                        <input type="hidden" name="user_id" value="{{ user_id }}">
+                        <button type="submit" name="access" class="access-button">Access Service</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
     {% else %}
-        <p>No organizations found providing thesis search service.</p>
+        <div class="no-results">
+            <p>No organizations found providing thesis search service.</p>
+        </div>
     {% endif %}
     
-    <br>
-    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}" class="back-link">← Back to Dashboard</a>
 </body>
 </html>
