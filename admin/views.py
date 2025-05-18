@@ -140,6 +140,12 @@ def t_admin_main_page():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # Get current user information
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
     # Get counts for unanswered and answered questions
     unanswered_count = db.session.execute(
         db.select(db.func.count(Question.question_id))
@@ -152,6 +158,7 @@ def t_admin_main_page():
     ).scalar()
     
     return render_template('t-admin_main_page.html', 
+                         user=user,
                          unanswered_count=unanswered_count,
                          answered_count=answered_count)
 

@@ -198,11 +198,26 @@ def add_member():
             flash('A member with this email already exists', 'error')
             return redirect(url_for('oconvener.list_a'))
         
+        # 检查是否有匹配的邮箱模式
+        should_auto_activate = False
+        if user_type == 'PC' and '@' in email:
+            domain = email[email.index('@'):]
+            pattern = f'*{domain}'
+            existing_pattern = db.session.execute(
+                "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
+                [oc.organization_id, pattern]
+            ).first()
+            should_auto_activate = bool(existing_pattern)
+        
+        # 根据用户类型和规则决定是否自动激活
+        active_status = 1 if (user_type not in ['PP', 'PC', 'CC'] or should_auto_activate) else 0
+        
         new_member = Member(
             email=email,
             user_type=user_type,
             organization_id=oc.organization_id,
-            fund=0
+            fund=0,
+            active_status=active_status
         )
         db.session.add(new_member)
         db.session.commit()
@@ -213,6 +228,108 @@ def add_member():
         flash(f'Error adding member: {str(e)}', 'error')
     
     return redirect(url_for('oconvener.list_a'))
+
+@oconvener_bp.route('/pay-member-fee', methods=['POST'])
+def pay_member_fee():
+    """处理会员费支付"""
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Please login first'}), 401
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+
+    try:
+        # 获取该组织所有未激活账号
+        inactive_members = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, active_status=0)
+            .filter(Member.user_type.in_(['PP', 'PC', 'CC']))
+        ).scalars().all()
+
+        if not inactive_members:
+            return jsonify({'status': 'error', 'message': 'No inactive members found'}), 400
+
+        # 计算费用
+        total_cost = 0
+        pc_count = 0
+        is_first_pc = True
+
+        # 检查是否已经有激活的PC
+        existing_active_pc = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+        ).first()
+        
+        if existing_active_pc:
+            is_first_pc = False
+
+        for member in inactive_members:
+            if member.user_type == 'CC':
+                total_cost += 100
+            elif member.user_type == 'PC':
+                pc_count += 1
+
+        # 如果是首次添加PC且有PC用户需要激活
+        if is_first_pc and pc_count > 0:
+            total_cost += 1000
+
+        # 如果没有需要支付的费用
+        if total_cost == 0:
+            # 直接激活所有成员
+            for member in inactive_members:
+                member.active_status = 1
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully activated {len(inactive_members)} members without fee'
+            })
+
+        # 进行支付
+        success, result = process_payment(
+            from_org_id=oc.organization_id,
+            to_org_id=0,  # system organization
+            amount=total_cost
+        )
+
+        if not isinstance(result, str) and result.get('status') == 'success':
+            # 激活用户
+            for member in inactive_members:
+                member.active_status = 1
+            
+            # 如果存在*@格式的PC邮箱，添加到patterns表
+            for member in inactive_members:
+                if member.user_type == 'PC' and '*@' in member.email:
+                    pattern = member.email[member.email.index('*@'):]
+                    # 检查是否已存在相同的pattern
+                    existing_pattern = db.session.execute(
+                        "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
+                        [oc.organization_id, pattern]
+                    ).first()
+                    
+                    if not existing_pattern:
+                        db.session.execute(
+                            'INSERT INTO email_patterns (organization_id, pattern) VALUES (?, ?)',
+                            [oc.organization_id, pattern]
+                        )
+            
+            db.session.commit()
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully activated {len(inactive_members)} members'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Payment failure!'
+            }), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @oconvener_bp.route('/edit-member/<int:member_id>', methods=['POST'])
 def edit_member(member_id):
@@ -340,38 +457,37 @@ def batch_import_members():
                     error_count += 1
                     continue
                 
-                if '*@' in row['email']:
-                    existing_member = db.session.execute(
-                        db.select(Member).filter_by(email=row['email'])
-                    ).scalar_one_or_none()
-                    
-                    if existing_member:
-                        existing_member.user_type = row['user_type']
-                        existing_member.fund = int(row['fund'])
-                    else:
-                        new_member = Member(
-                            email=row['email'],
-                            user_type=row['user_type'],
-                            organization_id=oc.organization_id,
-                            fund=int(row['fund'])
-                        )
-                        db.session.add(new_member)
+                # 检查是否有匹配的邮箱模式，以及是否需要自动激活
+                should_auto_activate = False
+                if row['user_type'] == 'PC' and '@' in row['email']:
+                    domain = row['email'][row['email'].index('@'):]
+                    pattern = f'*{domain}'
+                    existing_pattern = db.session.execute(
+                        "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
+                        [oc.organization_id, pattern]
+                    ).first()
+                    should_auto_activate = bool(existing_pattern)
+
+                # 根据规则确定激活状态
+                active_status = 1 if (row['user_type'] not in ['PP', 'PC', 'CC'] or should_auto_activate) else 0
+
+                existing_member = db.session.execute(
+                    db.select(Member).filter_by(email=row['email'])
+                ).scalar_one_or_none()
+                
+                if existing_member:
+                    existing_member.user_type = row['user_type']
+                    existing_member.fund = int(row['fund'])
+                    existing_member.active_status = active_status
                 else:
-                    existing_member = db.session.execute(
-                        db.select(Member).filter_by(email=row['email'])
-                    ).scalar_one_or_none()
-                    
-                    if existing_member:
-                        existing_member.user_type = row['user_type']
-                        existing_member.fund = int(row['fund'])
-                    else:
-                        new_member = Member(
-                            email=row['email'],
-                            user_type=row['user_type'],
-                            organization_id=oc.organization_id,
-                            fund=int(row['fund'])
-                        )
-                        db.session.add(new_member)
+                    new_member = Member(
+                        email=row['email'],
+                        user_type=row['user_type'],
+                        organization_id=oc.organization_id,
+                        fund=int(row['fund']),
+                        active_status=active_status
+                    )
+                    db.session.add(new_member)
                 
                 success_count += 1
                 

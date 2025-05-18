@@ -25,6 +25,7 @@ class Member(db.Model):
 
     fund = db.Column(db.Integer, nullable=False, default=50)  # 限定的钱数
     organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'), nullable=False)
+    active_status = db.Column(db.Integer, nullable=False, default=0)
 
     organization = db.relationship('Organization', back_populates='members')
 
@@ -190,6 +191,14 @@ class Policy(db.Model):
     pdf_path = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+class EmailPattern(db.Model):
+    __tablename__ = 'email_patterns'
+    pattern_id = db.Column(db.Integer, primary_key=True)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organizations.organization_id'))
+    pattern = db.Column(db.String(255), nullable=False)
+
+    organization = db.relationship('Organization')
 
 class SystemLog(db.Model):
     __tablename__ = 'system_logs'

@@ -84,7 +84,21 @@ def dashboard(user_type):
 
     # Handle different user types
     if user_type == 'TT':
-        return render_template('t-admin_main_page.html', user=member)
+        # Get counts for unanswered and answered questions
+        unanswered_count = db.session.execute(
+            db.select(db.func.count(Question.question_id))
+            .filter_by(status=0)
+        ).scalar()
+        
+        answered_count = db.session.execute(
+            db.select(db.func.count(Question.question_id))
+            .filter_by(status=1)
+        ).scalar()
+        
+        return render_template('t-admin_main_page.html', 
+                             user=member,
+                             unanswered_count=unanswered_count,
+                             answered_count=answered_count)
     elif user_type == 'EE':
         return render_template('e_admin_main.html', user=member)
     elif user_type == 'SE':

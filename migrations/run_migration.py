@@ -11,7 +11,7 @@ def run_migration():
         cursor = conn.cursor()
         
         # Read and execute the SQL migration script
-        with open(os.path.join(os.path.dirname(__file__), 'add_question_fields.sql'), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), 'add_member_status_and_patterns.sql'), 'r') as f:
             sql_script = f.read()
             
         # Execute migration script

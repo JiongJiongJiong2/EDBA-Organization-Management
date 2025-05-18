@@ -178,6 +178,23 @@
             color: #666;
         }
 
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .status-badge.inactive {
+            background-color: #ff5722;
+            color: white;
+        }
+
         .file-upload {
             border: 2px dashed #e0e0e0;
             padding: 2rem;
@@ -243,13 +260,17 @@
         </div>
 
         <div class="card">
-            <h2 class="card-title">Member List</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 class="card-title" style="margin-bottom: 0;">Member List</h2>
+                <button id="payMemberFeeBtn" class="btn btn-primary">Pay Member Fee</button>
+            </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
                             <th>Email</th>
                             <th>User Type</th>
+                            <th>Status</th>
                             <th>Fund</th>
                             <th>Actions</th>
                         </tr>
@@ -259,6 +280,13 @@
                         <tr>
                             <td>{{ member.email }}</td>
                             <td>{{ member.user_type }}</td>
+                            <td>
+                                {% if member.active_status == 1 %}
+                                    <span class="status-badge active">Activated</span>
+                                {% else %}
+                                    <span class="status-badge inactive">Inactive</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <form action="{{ url_for('oconvener.update_member_fund', member_id=member.user_id) }}" method="post" style="display: inline-flex; align-items: center;">
                                     <input type="number" name="fund" value="{{ member.fund }}" min="0" class="fund-input">
@@ -304,6 +332,29 @@
     </div>
 
     <script>
+        document.getElementById('payMemberFeeBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to pay the membership fee for all inactive members?')) {
+                fetch('/oconvener/pay-member-fee', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error processing payment: ' + error);
+                });
+            }
+        });
+
         function openEditModal(memberId, email, userType) {
             document.getElementById('editMemberModal').style.display = 'block';
             document.getElementById('editEmail').value = email;
