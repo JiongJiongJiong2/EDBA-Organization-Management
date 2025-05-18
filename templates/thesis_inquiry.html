@@ -177,10 +177,43 @@
             </div>
             <button type="submit" name="search" class="button">Search</button>
         </form>
+
+        {% if result %}
+            <div class="search-results">
+                <h4 class="section-title" style="margin-top: 20px;">Search Results</h4>
+                {% if result is string %}
+                    <div class="thesis-result">{{ result }}</div>
+                {% elif result is mapping %}
+                    <div class="thesis-result">
+                        {% for key, value in result.items() if key not in ['_download_params'] %}
+                            <div class="thesis-detail">
+                                <strong>{{ key|title }}:</strong> {{ value }}
+                            </div>
+                            {% if key == 'title' %}
+                                <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post" style="margin-top: 15px;">
+                                    {% if result.get('_download_params') %}
+                                        {% for field_name, field_type in result.get('_download_params', {}).items() %}
+                                            {% if field_name == 'title' %}
+                                                <input type="hidden" name="title" value="{{ value }}">
+                                            {% else %}
+                                                <input type="hidden" name="{{ field_name }}" value="{{ result.get(field_name, '') }}">
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
+                                    <button type="submit" name="download" class="button">Download This Thesis</button>
+                                </form>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="thesis-result">{{ result }}</div>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 
     <div class="section">
-        <h3 class="section-title">Download Thesis</h3>
+        <h3 class="section-title">Manual Download</h3>
         <p style="color: #666; margin-bottom: 15px;">You can either search for a thesis first or enter thesis details directly below:</p>
         <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post">
             {% for service in service.organization.services %}
@@ -199,38 +232,6 @@
         </form>
     </div>
 
-    {% if result %}
-        <div class="result-section">
-            <h3 class="section-title">Search Results</h3>
-            {% if result is string %}
-                <div class="thesis-result">{{ result }}</div>
-            {% elif result is mapping %}
-                <div class="thesis-result">
-                    {% for key, value in result.items() if key not in ['_download_params'] %}
-                        <div class="thesis-detail">
-                            <strong>{{ key|title }}:</strong> {{ value }}
-                        </div>
-                        {% if key == 'title' %}
-                            <form action="{{ url_for('user.submit_thesis_inquiry', service_id=service.service_id) }}" method="post" style="margin-top: 15px;">
-                                {% if result.get('_download_params') %}
-                                    {% for field_name, field_type in result.get('_download_params', {}).items() %}
-                                        {% if field_name == 'title' %}
-                                            <input type="hidden" name="title" value="{{ value }}">
-                                        {% else %}
-                                            <input type="hidden" name="{{ field_name }}" value="{{ result.get(field_name, '') }}">
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
-                                <button type="submit" name="download" class="button">Download This Thesis</button>
-                            </form>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="thesis-result">{{ result }}</div>
-            {% endif %}
-        </div>
-    {% endif %}
     
     <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}" class="back-link">← Back to Dashboard</a>
 
