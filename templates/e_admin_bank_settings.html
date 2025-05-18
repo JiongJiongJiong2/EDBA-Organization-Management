@@ -84,21 +84,31 @@
         <div style="width: 100%; height: 100%; padding: 20px;">
             <h2 style="margin-bottom: 30px; color: #333; font-size: 24px;">E-DBA Bank Account Settings</h2>
 
-            <!-- 银行账户信息 -->
+            <!-- Bank Account Information -->
             <div style="margin-bottom: 30px; padding: 20px; background-color: #f5f5f5; border-radius: 8px;">
                 <h3 style="margin-bottom: 20px; color: #333;">Bank Account Information</h3>
                 <form method="POST" action="{{ url_for('admin.update_bank_account') }}" style="display: grid; gap: 15px;">
                     <div>
-                        <label style="display: block; margin-bottom: 5px;">Account Number</label>
-                        <input type="text" name="account_number" value="{{ bank_account.account_number if bank_account else '' }}" required
-                               pattern="[0-9]+" title="Please enter a valid account number"
+                        <label style="display: block; margin-bottom: 5px;">Bank Name</label>
+                        <input type="text" name="bank" value="{{ bank_account.bank if bank_account else '' }}" required
                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     </div>
 
                     <div>
-                        <label style="display: block; margin-bottom: 5px;">Membership Fee (in currency unit)</label>
-                        <input type="number" name="membership_fee" value="{{ bank_account.membership_fee if bank_account else 0 }}"
-                               min="0" step="0.01" required
+                        <label style="display: block; margin-bottom: 5px;">Account Name</label>
+                        <input type="text" name="name" value="{{ bank_account.name if bank_account else '' }}" required
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 5px;">Account Number</label>
+                        <input type="text" name="number" value="{{ bank_account.number if bank_account else '' }}" required
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 5px;">Account Password</label>
+                        <input type="password" name="password" value="{{ bank_account.password if bank_account else '' }}" required
                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                     </div>
 
@@ -111,18 +121,26 @@
                 </form>
             </div>
 
-            <!-- 当前费用说明 -->
+            <!-- Current Bank Account Information -->
             {% if bank_account %}
             <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h3 style="margin-bottom: 15px; color: #333;">Current Settings</h3>
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px; font-weight: bold;">Bank Account Number:</td>
-                        <td style="padding: 12px;">{{ bank_account.account_number }}</td>
+                        <td style="padding: 12px; font-weight: bold;">Bank Name:</td>
+                        <td style="padding: 12px;">{{ bank_account.bank }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px; font-weight: bold;">Account Name:</td>
+                        <td style="padding: 12px;">{{ bank_account.name }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 12px; font-weight: bold;">Account Number:</td>
+                        <td style="padding: 12px;">{{ bank_account.number }}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 12px; font-weight: bold;">Current Membership Fee:</td>
-                        <td style="padding: 12px;">{{ bank_account.membership_fee }} currency units</td>
+                        <td style="padding: 12px; font-weight: bold;">Account Password:</td>
+                        <td style="padding: 12px;">•••••••••</td>
                     </tr>
                 </table>
             </div>

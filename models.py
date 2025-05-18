@@ -211,9 +211,3 @@ class SystemLog(db.Model):
 
     user = db.relationship('Member')
     organization = db.relationship('Organization')
-
-class EDBankAccount(db.Model):
-    __tablename__ = 'ed_bank_accounts'
-    account_id = db.Column(db.Integer, primary_key=True)
-    account_number = db.Column(db.String(50), unique=True, nullable=False)
-    membership_fee = db.Column(db.Numeric(10, 2), nullable=False, default=0)

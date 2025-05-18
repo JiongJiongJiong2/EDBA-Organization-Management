@@ -4,7 +4,7 @@ import sqlite3
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, EDBankAccount, Question
+from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, BankAccount, Question
 from flask import current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -539,15 +539,16 @@ def bank_settings():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
-    # 获取当前用户信息
+    # Get current user information
     user = db.session.get(Member, session['user_id'])
     if not user:
-        flash('用户信息不存在', 'error')
+        flash('User information not found', 'error')
         return redirect(url_for('auth.login'))
     
+    # Get bank account for organization_id=0 (EDBA)
     bank_account = db.session.execute(
-        db.select(EDBankAccount).order_by(EDBankAccount.account_id.desc()).limit(1)
-    ).scalar()
+        db.select(BankAccount).filter_by(organization_id=0)
+    ).scalar_one_or_none()
     
     return render_template('e_admin_bank_settings.html', 
                          user=user,
@@ -560,31 +561,48 @@ def update_bank_account():
         return redirect(url_for('auth.login'))
     
     try:
-        account_number = request.form.get('account_number')
-        membership_fee = float(request.form.get('membership_fee'))
+        # Get form data
+        bank_name = request.form.get('bank')
+        account_name = request.form.get('name')
+        account_number = request.form.get('number')
+        password = request.form.get('password')
         
-        if membership_fee < 0:
-            raise ValueError('Membership fee cannot be negative')
+        if not all([bank_name, account_name, account_number, password]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('admin.bank_settings'))
+        
+        # Get or create organization 0 (EDBA)
+        org_zero = db.session.execute(
+            db.select(Organization).filter_by(organization_id=0)
+        ).scalar_one_or_none()
+        
+        if not org_zero:
+            org_zero = Organization(organization_id=0, name='System Organization')
+            db.session.add(org_zero)
+            db.session.flush()
         
         # Get existing account or create new one
         bank_account = db.session.execute(
-            db.select(EDBankAccount).order_by(EDBankAccount.account_id.desc()).limit(1)
-        ).scalar()
+            db.select(BankAccount).filter_by(organization_id=0)
+        ).scalar_one_or_none()
         
         if bank_account:
-            bank_account.account_number = account_number
-            bank_account.membership_fee = membership_fee
+            bank_account.bank = bank_name
+            bank_account.name = account_name
+            bank_account.number = account_number
+            bank_account.password = password
         else:
-            bank_account = EDBankAccount(
-                account_number=account_number,
-                membership_fee=membership_fee
+            bank_account = BankAccount(
+                organization_id=0,
+                bank=bank_name,
+                name=account_name,
+                number=account_number,
+                password=password
             )
             db.session.add(bank_account)
         
         db.session.commit()
         flash('Bank account settings updated successfully', 'success')
-    except ValueError as e:
-        flash(str(e), 'error')
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating bank account settings: {str(e)}', 'error')

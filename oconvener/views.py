@@ -41,21 +41,24 @@ def check_payment_service(organization_id):
 
 def process_payment(from_org_id, to_org_id, amount):
     try:
+        # Get payment service (type 'M')
         payment_service = db.session.execute(
             db.select(Service)
             .filter(Service.organization_id == from_org_id)
             .filter(Service.service_type == 'M')
-            .filter(Service.status == 2)
+            .filter(Service.status == 2)  # Must be configured
         ).scalar_one_or_none()
         
         if not payment_service:
             return False, "No transfer service available"
         
+        # Get sender's bank account
         from_account = db.session.execute(
             db.select(BankAccount)
             .filter(BankAccount.organization_id == from_org_id)
         ).scalar_one_or_none()
         
+        # Get EDBA's bank account (organization_id=0)
         to_account = db.session.execute(
             db.select(BankAccount)
             .filter(BankAccount.organization_id == to_org_id)
@@ -64,6 +67,7 @@ def process_payment(from_org_id, to_org_id, amount):
         if not from_account or not to_account:
             return False, "Bank account information not found"
         
+        # Prepare payment data
         payment_data = {
             "from_bank": from_account.bank,
             "from_name": from_account.name,
@@ -75,10 +79,16 @@ def process_payment(from_org_id, to_org_id, amount):
             "amount": amount
         }
         
+        # Send payment request
         url = payment_service.url + payment_service.path
         response = requests.post(url, json=payment_data)
         
-        return (True, response.json()) if response.status_code == 200 else (False, "Payment failed")
+        # Handle response
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 'success':
+                return True, result
+        return False, "Payment failure!"
             
     except Exception as e:
         return False, str(e)
