@@ -75,11 +75,11 @@
                         </div>
                         <div>
                             <label for="input-{{ service.service_id }}">Request inputs (JSON format):</label>
-                            <textarea id="input-{{ service.service_id }}" name="input_json" required>{{ service.input_json | tojson(indent=2) if service.input_json else '{}' }}</textarea>
+                            <textarea id="input-{{ service.service_id }}" name="input_json" required>{{ service.input_data if service.input_data else '{}' }}</textarea>
                         </div>
                         <div>
                             <label for="output-{{ service.service_id }}">Request outputs (JSON format):</label>
-                            <textarea id="output-{{ service.service_id }}" name="output_json" required>{{ service.output_json | tojson(indent=2) if service.output_json else '{}' }}</textarea>
+                            <textarea id="output-{{ service.service_id }}" name="output_json" required>{{ service.output_data if service.output_data else '{}' }}</textarea>
                         </div>
                         <button type="submit">Submit</button>
                     </form>

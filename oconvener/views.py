@@ -502,8 +502,8 @@ def submit_configuration(service_id):
         service.url = request.form['url']
         service.path = request.form['path']
         service.method = request.form['method']
-        service.input_json = json.loads(request.form['input_json'])
-        service.output_json = json.loads(request.form['output_json'])
+        service.input_data = request.form['input_json']
+        service.output_data = request.form['output_json']
         service.status = 2  # Set status to "Configured"
         
         db.session.commit()
