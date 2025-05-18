@@ -460,6 +460,90 @@ def update_service_status(service_id):
     
     return redirect(url_for('oconvener.manage_services', organization_id=service.organization_id))
 
+# Configuration Interface Route
+@oconvener_bp.route('/configuration-interface')
+def configuration_interface():
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can access configuration interface', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    services = db.session.execute(
+        db.select(Service)
+        .filter(Service.organization_id == user.organization_id)
+        .order_by(Service.service_type)
+    ).scalars().all()
+    
+    return render_template('configuration_interface.html', services=services, user=user)
+
+# Service Configuration Routes
+@oconvener_bp.route('/submit-configuration/<int:service_id>', methods=['POST'])
+def submit_configuration(service_id):
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can submit configurations', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    service = db.session.get(Service, service_id)
+    if not service or service.organization_id != user.organization_id:
+        flash('Service not found', 'error')
+        return redirect(url_for('oconvener.configuration_interface'))
+    
+    try:
+        # Update service configuration
+        service.url = request.form['url']
+        service.path = request.form['path']
+        service.method = request.form['method']
+        service.input_json = json.loads(request.form['input_json'])
+        service.output_json = json.loads(request.form['output_json'])
+        service.status = 2  # Set status to "Configured"
+        
+        db.session.commit()
+        flash('Service configuration updated successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating configuration: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.configuration_interface'))
+
+@oconvener_bp.route('/release-service/<int:service_id>', methods=['POST'])
+def release_service(service_id):
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'PP':
+        flash('Only PP users can release services', 'error')
+        return redirect(url_for('user.dashboard', user_type=session.get('user_type')))
+    
+    service = db.session.get(Service, service_id)
+    if not service or service.organization_id != user.organization_id:
+        flash('Service not found', 'error')
+        return redirect(url_for('oconvener.configuration_interface'))
+    
+    if service.status != 2:
+        flash('Only configured services can be released', 'error')
+        return redirect(url_for('oconvener.configuration_interface'))
+    
+    try:
+        service.status = 3  # Set status to "Released"
+        db.session.commit()
+        flash('Service has been released successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error releasing service: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.configuration_interface'))
+
 # Main Routes
 @oconvener_bp.route('/')
 def index():
