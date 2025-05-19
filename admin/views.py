@@ -91,6 +91,12 @@ def t_admin_question_a():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # Get current user
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+
     search_query = request.args.get('search', '')
     
     if search_query:
@@ -115,7 +121,10 @@ def t_admin_question_a():
             .order_by(Question.submit_time.desc())
         ).scalars().all()
     
-    return render_template('t-admin_question_a.html', questions=questions, search_query=search_query)
+    return render_template('t-admin_question_a.html', 
+                         user=user,
+                         questions=questions, 
+                         search_query=search_query)
 
 @admin_bp.route('/t_admin/questions/b')
 def t_admin_question_b():
@@ -123,6 +132,12 @@ def t_admin_question_b():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # Get current user
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+
     search_query = request.args.get('search', '')
     
     if search_query:
@@ -147,7 +162,10 @@ def t_admin_question_b():
             .order_by(Question.submit_time.desc())
         ).scalars().all()
     
-    return render_template('t-admin_question_b.html', questions=questions, search_query=search_query)
+    return render_template('t-admin_question_b.html', 
+                         user=user,
+                         questions=questions, 
+                         search_query=search_query)
 
 @admin_bp.route('/t_admin/submit_answer/<question_id>', methods=['POST'])
 def t_admin_submit_answer(question_id):
@@ -269,6 +287,12 @@ def t_admin_user_management():
         flash('Unauthorized access', 'error')
         return redirect(url_for('auth.login'))
     
+    # Get current user
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+
     search_query = request.args.get('search', '')
     
     # Get existing admins
@@ -287,7 +311,10 @@ def t_admin_user_management():
             db.select(Member).filter_by(organization_id=0)
         ).scalars().all()
     
-    return render_template('t-admin_user_management.html', admins=admins, search_query=search_query)
+    return render_template('t-admin_user_management.html', 
+                         user=user,
+                         admins=admins, 
+                         search_query=search_query)
 
 # SE Admin Routes
 @admin_bp.route('/se_admin/main')
