@@ -289,21 +289,21 @@ def login():
                 session['user_id'] = member.user_id
                 session['organization_id'] = member.organization_id
 
-                # Log OC login
-                if member.user_type == 'OC':
-                    log_entry = SystemLog(
-                        user_id=member.user_id,
-                        activity_type='login',
-                        organization_id=member.organization_id,
-                        details=json.dumps({
-                            'action': 'OC_login',
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                            'status': 'success',
-                            'user_email': member.email
-                        })
-                    )
-                    db.session.add(log_entry)
-                    db.session.commit()
+                # Log user login
+                log_entry = SystemLog(
+                    user_id=member.user_id,
+                    activity_type='login',
+                    organization_id=member.organization_id,
+                    details=json.dumps({
+                        'action': f'{member.user_type}_login',
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'status': 'success',
+                        'user_email': member.email,
+                        'user_type': member.user_type
+                    })
+                )
+                db.session.add(log_entry)
+                db.session.commit()
 
                 # Initialize services for OC upon first login
                 if member.user_type == 'OC':

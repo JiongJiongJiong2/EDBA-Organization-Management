@@ -8,7 +8,7 @@ import sys
 import os  
 import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Service, BankAccount
+from models import db, Member, Service, BankAccount, SystemLog
 from db_utils import validate_email_pattern
 
 import json
@@ -669,6 +669,54 @@ def release_service(service_id):
         flash(f'Error releasing service: {str(e)}', 'error')
     
     return redirect(url_for('oconvener.configuration_interface'))
+
+# Log Routes
+@oconvener_bp.route('/logs')
+def view_logs():
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        flash('Only O-Conveners can view logs', 'error')
+        return redirect(url_for('user.dashboard'))
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
+    # Build the query with filters
+    query = (db.select(SystemLog)
+             .join(Member, SystemLog.user_id == Member.user_id)
+             .filter(Member.organization_id == user.organization_id)
+             .filter(Member.user_type.in_(['PP', 'PC', 'CC'])))
+    
+    # Apply activity type filter
+    activity_type = request.args.get('activity_type')
+    if activity_type:
+        query = query.filter_by(activity_type=activity_type)
+
+    # Apply date filters
+    start_date = request.args.get('start_date')
+    if start_date:
+        query = query.filter(SystemLog.timestamp >= f"{start_date} 00:00:00")
+    
+    end_date = request.args.get('end_date')
+    if end_date:
+        query = query.filter(SystemLog.timestamp <= f"{end_date} 23:59:59")
+
+    # Execute query with pagination
+    pagination = db.paginate(
+        query.order_by(SystemLog.timestamp.desc()),
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    return render_template('oc_logs.html', 
+                         logs=pagination.items, 
+                         pagination=pagination,
+                         user=user)
 
 # Main Routes
 @oconvener_bp.route('/')
