@@ -210,12 +210,32 @@
             text-decoration: underline;
         }
 
-        .json-details {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: monospace;
+        .log-details {
+            padding: 0;
+            background: #ffffff;
+        }
+
+        .detail-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-item label {
+            font-weight: 600;
+            min-width: 100px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .detail-item span {
+            color: #555;
+            font-size: 14px;
         }
 
         /* Modal styles */
@@ -237,7 +257,7 @@
 
         .modal-dialog {
             max-width: 500px;
-            margin: 5% auto;
+            margin: 20vh auto;
             position: relative;
         }
 
@@ -264,16 +284,36 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 15px 20px;
-            border-bottom: 1px solid #ddd;
-            background-color: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
             border-radius: 8px 8px 0 0;
         }
 
+        .modal-header h5 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
         .modal-body {
-            padding: 20px;
+            padding: 0;
             max-height: 70vh;
             overflow-y: auto;
+            background-color: #fff;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .modal-dialog {
+            max-width: 500px;
+            margin: 10vh auto;
+            position: relative;
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.15);
         }
 
         .btn-close {
@@ -391,12 +431,12 @@
 
                         {% if log.details %}
                         <!-- Details Modal -->
-                        <div class="modal fade" id="detailsModal{{ log.log_id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal fade" id="detailsModal{{ log.log_id }}" tabindex="-1">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title">Log Details</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal">&times;</button>
                                     </div>
                                     <div class="modal-body">
                                         <div class="log-details">
