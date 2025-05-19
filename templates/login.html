@@ -202,6 +202,24 @@
         .view-policy-btn:hover {
             color: #5a6268;
         }
+
+        .download-btn {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .download-btn:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -257,9 +275,15 @@
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('policyContent').innerHTML = `
-                        <h4>${data.title}</h4>
-                        <p>${data.content}</p>
-                        ${data.pdf_path ? `<p><a href="${data.pdf_path}" target="_blank">Download PDF</a></p>` : ''}
+                        <div style="text-align: center;">
+                            <h4>${data.title}</h4>
+                            <p style="text-align: left;">${data.content}</p>
+                            ${data.pdf_path ? `
+                                <button class="download-btn" onclick="window.open('${data.pdf_path}', '_blank')">
+                                    <i style="margin-right: 8px;">📥</i>Download Policy PDF
+                                </button>
+                            ` : ''}
+                        </div>
                     `;
                     document.getElementById('policyModal').style.display = 'block';
                 })
