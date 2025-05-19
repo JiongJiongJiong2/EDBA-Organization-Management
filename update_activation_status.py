@@ -20,12 +20,20 @@ def update_member_activation_status(organization_id: int, exclude_roles: List[st
         # Create placeholders for the excluded roles
         placeholders = ','.join('?' for _ in exclude_roles)
         
-        # Execute the update query
+        # Update non-excluded roles to inactive (0)
         cursor.execute(f'''
             UPDATE members 
             SET active_status = 0 
             WHERE organization_id = ?
             AND user_type NOT IN ({placeholders})
+        ''', [organization_id] + exclude_roles)
+
+        # Update excluded roles (OC) to active (1)
+        cursor.execute(f'''
+            UPDATE members 
+            SET active_status = 1 
+            WHERE organization_id = ?
+            AND user_type IN ({placeholders})
         ''', [organization_id] + exclude_roles)
 
         # Commit the changes

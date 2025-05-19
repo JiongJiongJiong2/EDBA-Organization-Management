@@ -98,6 +98,40 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(5px);
         }
+        .card-title {
+            color: #1976d2;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e3f2fd;
+            font-size: 18px;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 6px;
+            background-color: #1976d2;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .button:hover {
+            background-color: #1565c0;
+            transform: translateY(-1px);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+        .button.secondary {
+            background-color: #78909c;
+        }
+        .button.secondary:hover {
+            background-color: #607d8b;
+        }
         form {
             margin-bottom: 10px;
         }
