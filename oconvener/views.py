@@ -107,22 +107,60 @@ def account_a():
     if 'user_id' not in session:
         flash('Please login first', 'warning')
         return redirect(url_for('auth.login'))
-    return render_template('oc_bank_auth.html')
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        flash('Only O-Conveners can access this page', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    # Get bank account for organization
+    bank_account = db.session.execute(
+        db.select(BankAccount).filter_by(organization_id=user.organization_id)
+    ).scalar_one_or_none()
+    
+    return render_template('oc_bank_auth.html', user=user, bank_account=bank_account)
 
 @oconvener_bp.route('/bank/authenticate', methods=['POST'])
 def bank_authenticate():
+    if 'user_id' not in session:
+        return jsonify({"status": "fail", "reason": "Please login first"}), 401
+
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        return jsonify({"status": "fail", "reason": "Only O-Conveners can manage bank accounts"}), 403
+
     try:
         data = request.json
-        required_fields = ["bank", "account_name", "account_number", "password"]
-        if not data or not all(field in data for field in required_fields):
-            return jsonify({"status": "fail", "reason": "Missing required fields"}), 400
+        if not data or not all(data.get(field) for field in ["bank", "account_name", "account_number", "password"]):
+            return jsonify({"status": "fail", "reason": "All fields are required"}), 400
 
-        response = requests.post(API_ENDPOINTS['bank_auth'], json=data)
-        if response.status_code != 200:
-            return jsonify({"status": "fail", "reason": "External API error"}), 502
+        # Get or create bank account record
+        bank_account = db.session.execute(
+            db.select(BankAccount).filter_by(organization_id=user.organization_id)
+        ).scalar_one_or_none()
 
-        return jsonify(response.json())
+        if bank_account:
+            # Update existing record
+            bank_account.bank = data['bank']
+            bank_account.name = data['account_name']
+            bank_account.number = data['account_number']
+            bank_account.password = data['password']
+        else:
+            # Create new record
+            bank_account = BankAccount(
+                organization_id=user.organization_id,
+                bank=data['bank'],
+                name=data['account_name'],
+                number=data['account_number'],
+                password=data['password']
+            )
+            db.session.add(bank_account)
+
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Bank account settings updated successfully"})
+
     except Exception as e:
+        db.session.rollback()
         return jsonify({"status": "fail", "reason": str(e)}), 500
 
 # Member Management Routes
