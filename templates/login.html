@@ -277,7 +277,7 @@
                     document.getElementById('policyContent').innerHTML = `
                         <div style="text-align: center;">
                             <h4>${data.title}</h4>
-                            <p style="text-align: left;">${data.content}</p>
+                            <pre style="text-align: left; white-space: pre-wrap; font-family: inherit; line-height: 1.5; margin: 0;">${data.content}</pre>
                             ${data.pdf_path ? `
                                 <button class="download-btn" onclick="window.open('${data.pdf_path}', '_blank')">
                                     <i style="margin-right: 8px;">📥</i>Download Policy PDF

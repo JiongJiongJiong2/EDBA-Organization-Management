@@ -261,8 +261,8 @@
                     <tr>
                         <td>{{ policy.title }}</td>
                         <td>
-                            <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                {{ policy.content }}
+                            <div style="max-width: 300px; overflow-y: auto; max-height: 100px;">
+                                <pre style="margin: 0; white-space: pre-wrap; font-family: inherit; line-height: 1.5; padding: 4px;">{{ policy.content | replace('\n\n', '\n \n') }}</pre>
                             </div>
                         </td>
                         <td>{{ policy.created_at.strftime('%Y-%m-%d') }}</td>
