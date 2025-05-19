@@ -61,16 +61,6 @@ def view_logs():
     # Get all organizations for the filter dropdown
     organizations = db.session.execute(db.select(Organization)).scalars().all()
 
-    # Add JSON-formatted details to each log
-    for log in logs:
-        if log.details:
-            try:
-                log.details_json = json.loads(log.details)
-            except json.JSONDecodeError:
-                log.details_json = None
-        else:
-            log.details_json = None
-
     return render_template('e_admin_logs.html', 
                          user=user,
                          logs=logs,
