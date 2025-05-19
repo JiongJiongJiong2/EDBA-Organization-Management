@@ -4,7 +4,7 @@ import sqlite3
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, BankAccount, Question, SystemLog
+from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, BankAccount, Question, SystemLog, Service
 from flask import current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -405,6 +405,20 @@ def se_admin_approve_application(app_id):
         )
         db.session.add(organization)
         db.session.flush()  # Get the organization_id
+
+        # Initialize M-type service
+        money_service = Service(
+            organization_id=organization.organization_id,
+            service_type='M',
+            status=2,  # Configured
+            url='http://172.16.160.88:8001',
+            path='/api/transfer',
+            method='POST',
+            input_data='{}',
+            output_data='{}',
+            cost=0  # Default cost
+        )
+        db.session.add(money_service)
 
         # Create O-Convener member for the organization
         oc_member = Member(
