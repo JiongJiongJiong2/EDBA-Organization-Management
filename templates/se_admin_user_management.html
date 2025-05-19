@@ -3,96 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SE-Admin</title>
+    <title>SE-Admin User Management</title>
     <style>
-        .menu-card {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            cursor: pointer;
-            border: 3px solid #4CAF50;
-            transition: transform 0.3s ease;
-            text-decoration: none;
-            display: block;
-        }
-        .menu-card:hover {
-            transform: translateY(-10px);
-        }
         body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-            margin: 0;
+            margin: auto;
             padding: 0;
-            background-color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: auto;
+            background: linear-gradient(315deg, rgba(101,0,94,1) 3%, rgba(60,132,206,1) 38%, rgba(48,238,226,1) 68%, rgba(255,25,25,1) 98%);
+            animation: gradient 15s ease infinite;
+            background-size: 400% 400%;
+            background-attachment: fixed;
         }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 0%;
+            }
+            50% {
+                background-position: 100% 100%;
+            }
+            100% {
+                background-position: 0% 0%;
+            }
+        }
+
+        .wave {
+            background: rgb(255 255 255 / 25%);
+            border-radius: 1000% 1000% 0 0;
+            position: fixed;
+            width: 200%;
+            height: 12em;
+            animation: wave 10s -3s linear infinite;
+            transform: translate3d(0, 0, 0);
+            opacity: 0.8;
+            bottom: 0;
+            left: 0;
+            z-index: -1;
+        }
+
+        .wave:nth-of-type(2) {
+            bottom: -1.25em;
+            animation: wave 18s linear reverse infinite;
+            opacity: 0.8;
+        }
+
+        .wave:nth-of-type(3) {
+            bottom: -2.5em;
+            animation: wave 20s -1s reverse infinite;
+            opacity: 0.9;
+        }
+
+        @keyframes wave {
+            2% {
+                transform: translateX(1);
+            }
+            25% {
+                transform: translateX(-25%);
+            }
+            50% {
+                transform: translateX(-50%);
+            }
+            75% {
+                transform: translateX(-25%);
+            }
+            100% {
+                transform: translateX(1);
+            }
+        }
+
         .header {
-            background: linear-gradient(to right, #1e5799, #2989d8);
-            color: white;
-            padding: 10px 20px;
+            background-color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 20px;
         }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
+
         .user-info {
-            font-size: 14px;
-        }
-        .container {
             display: flex;
-            min-height: calc(100vh - 60px);
+            align-items: center;
+            gap: 20px;
         }
-        .sidebar {
-            width: 250px;
-            background-color: #f5f5f5;
-            border-right: 1px solid #ddd;
-            padding: 20px 0;
+
+        .user-details {
+            color: #333;
         }
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
+
+        .user-details h3 {
             margin: 0;
+            font-size: 16px;
+            font-weight: 500;
         }
-        .sidebar-menu li {
-            padding: 10px 20px;
-            border-bottom: 1px solid #eee;
+
+        .user-details p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
-        }
-        .sidebar-menu li:hover {
-            background-color: #e9e9e9;
-        }
-        .sidebar-menu li.active {
-            background-color: #1e5799;
+            text-decoration: none;
+            transition: opacity 0.2s;
             color: white;
         }
-        .content {
-            flex: 1;
-            padding: 20px;
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-logout {
+            background-color: #dc3545;
+        }
+
+        .btn-back {
+            background-color: #6c757d;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>SE-Admin</h1>
+    <div>
+        <div class="wave"></div>
+        <div class="wave"></div>
+        <div class="wave"></div>
     </div>
     
+    <div class="header">
+        <div class="user-info">
+            <div class="user-details">
+                <h3>{{ user.email }}</h3>
+                <p>SE Administrator</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('admin.se_admin_main') }}" class="btn btn-back">Back to Main Page</a>
+            <form action="{{ url_for('auth.logout') }}" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-logout">Logout</button>
+            </form>
+        </div>
+    </div>
+
     <div class="container">
-        <div class="sidebar">
-            <ul class="sidebar-menu">
-                <li class="active">
-                    <div onclick="loadContent(dashboardUrl)" style="cursor: pointer;">
-                        Applications Management
-                    </div>
-                </li>
-            </ul>
+        <div class="content">
+            <h1>User Management</h1>
+            <div class="user-list">
+                <!-- Add your user management content here -->
+            </div>
         </div>
-
-        <div class="content" id="main-content">
-            <!-- Dynamic content will be loaded here -->
-        </div>
-
     </div>
 
 <script>
