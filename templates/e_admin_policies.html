@@ -210,7 +210,9 @@
                 <p>E-Admin Administrator</p>
             </div>
         </div>
-        <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
+        <form action="{{ url_for('auth.logout') }}" method="POST" style="display: inline;">
+            <button type="submit" class="logout-btn" style="margin: 0;">Logout</button>
+        </form>
     </div>
 
     <div class="container">
