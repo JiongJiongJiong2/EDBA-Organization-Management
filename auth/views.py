@@ -1,5 +1,5 @@
 # auth/views.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, send_file, current_app
 from flask_mail import Message
 
 import sys  
@@ -28,7 +28,7 @@ def get_latest_policy():
         return jsonify({
             'title': policy.title,
             'content': policy.content,
-            'pdf_path': url_for('admin.download_policy_pdf', policy_id=policy.policy_id) if policy.pdf_path else None
+            'pdf_path': url_for('auth.public_policy_download', policy_id=policy.policy_id) if policy.pdf_path else None
         })
     
     return jsonify({
@@ -36,6 +36,29 @@ def get_latest_policy():
         'content': 'No policy has been created yet.',
         'pdf_path': None
     })
+
+@auth_bp.route('/public/policy/<int:policy_id>/download')
+def public_policy_download(policy_id):
+    """Public route for downloading policy PDFs"""
+    policy = db.session.get(Policy, policy_id)
+    
+    if not policy or not policy.pdf_path:
+        flash('No PDF file available for this policy.', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], policy.pdf_path)
+    
+    if not os.path.exists(file_path):
+        flash('PDF file not found.', 'error')
+        return redirect(url_for('auth.login'))
+    
+    filename = os.path.basename(policy.pdf_path)
+    
+    return send_file(
+        file_path,
+        download_name=filename,
+        as_attachment=True
+    )
 
 # 生成验证码
 @auth_bp.route('/logout', methods=['POST'])

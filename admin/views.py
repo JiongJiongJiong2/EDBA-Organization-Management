@@ -687,10 +687,23 @@ def update_bank_account():
     return redirect(url_for('admin.bank_settings'))
 
 
+# E-Admin Main Page
+@admin_bp.route('/e_admin/main')
+def e_admin_main():
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('e_admin_main.html', user=user)
+
 #eadmin_policy
 # 显示政策管理页面
-@admin_bp.route('/e_admin_policies')
-
+@admin_bp.route('/e_admin/policies')
 def e_admin_policies():
     # 确保用户是EE管理员
     if 'user_id' not in session or session.get('user_type') != 'EE':
@@ -710,9 +723,8 @@ def e_admin_policies():
                          policies=policies)
 
 # 添加新政策
-@admin_bp.route('/policy/add', methods=['POST'])
-
-def add_policy():
+@admin_bp.route('/e_admin/policies/add', methods=['POST'])
+def e_admin_policies_add():
     # 权限检查
     if 'user_id' not in session or session.get('user_type') != 'EE':
         flash('Unauthorized access', 'error')
@@ -754,9 +766,8 @@ def add_policy():
     return redirect(url_for('admin.e_admin_policies'))
 
 # 删除政策
-@admin_bp.route('/policy/<int:policy_id>/delete', methods=['POST'])
-
-def delete_policy(policy_id):
+@admin_bp.route('/e_admin/policies/<int:policy_id>/delete', methods=['POST'])
+def e_admin_policies_delete(policy_id):
     # 权限检查
     if 'user_id' not in session or session.get('user_type') != 'EE':
         flash('Unauthorized access', 'error')
@@ -778,9 +789,8 @@ def delete_policy(policy_id):
     return redirect(url_for('admin.e_admin_policies'))
 
 # 获取单个政策信息（用于编辑）
-@admin_bp.route('/policy/<int:policy_id>', methods=['GET'])
-
-def get_policy(policy_id):
+@admin_bp.route('/e_admin/policies/<int:policy_id>', methods=['GET'])
+def e_admin_policies_get(policy_id):
     # 权限检查
     if 'user_id' not in session or session.get('user_type') != 'EE':
         flash('Unauthorized access', 'error')
@@ -797,9 +807,8 @@ def get_policy(policy_id):
     })
 
 # 更新政策
-@admin_bp.route('/policy/<int:policy_id>/update', methods=['POST'])
-
-def update_policy(policy_id):
+@admin_bp.route('/e_admin/policies/<int:policy_id>/update', methods=['POST'])
+def e_admin_policies_update(policy_id):
     # 权限检查
     if 'user_id' not in session or session.get('user_type') != 'EE':
         flash('Unauthorized access', 'error')
@@ -843,9 +852,8 @@ def update_policy(policy_id):
     return redirect(url_for('admin.e_admin_policies'))
 
 # 下载政策PDF文件
-@admin_bp.route('/policy/<int:policy_id>/download-pdf')
-
-def download_policy_pdf(policy_id):
+@admin_bp.route('/e_admin/policies/<int:policy_id>/download-pdf')
+def e_admin_policies_download_pdf(policy_id):
     policy = Policy.query.get_or_404(policy_id)
     
     if not policy.pdf_path:
