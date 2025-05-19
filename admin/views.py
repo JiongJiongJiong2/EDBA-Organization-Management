@@ -425,7 +425,8 @@ def se_admin_approve_application(app_id):
             email=application.email,
             user_type='OC',
             organization_id=organization.organization_id,
-            fund=50  # Default fund value
+            fund=50,  # Default fund value
+            active_status=1  # Ensure OC is active from creation
         )
         db.session.add(oc_member)
         db.session.flush()  # Ensure member is created before workspace

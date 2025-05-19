@@ -279,6 +279,11 @@ def login():
                 # 先尝试精确匹配
                 member = db.session.execute(db.select(Member).filter_by(email=email)).scalar_one_or_none()
                 
+                # Check activation status
+                if member and not member.active_status:
+                    flash('账号未激活，请联系组织召集人', 'danger')
+                    return redirect(url_for('auth.login'))
+                
                 if not member:
                     # 如果用户不存在，尝试通配符匹配
                     email_suffix = get_email_suffix(email)
