@@ -5,13 +5,14 @@ from flask_mail import Message
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Application, ApplicationDocument, Service, Policy
+from models import db, Member, Application, ApplicationDocument, Service, Policy, SystemLog
 from db_utils import get_email_suffix, find_matching_wildcard_rule, create_member_from_wildcard
 
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import random
 import string
+import json
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -287,6 +288,22 @@ def login():
                     
                 session['user_id'] = member.user_id
                 session['organization_id'] = member.organization_id
+
+                # Log OC login
+                if member.user_type == 'OC':
+                    log_entry = SystemLog(
+                        user_id=member.user_id,
+                        activity_type='login',
+                        organization_id=member.organization_id,
+                        details=json.dumps({
+                            'action': 'OC_login',
+                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'status': 'success',
+                            'user_email': member.email
+                        })
+                    )
+                    db.session.add(log_entry)
+                    db.session.commit()
 
                 # Initialize services for OC upon first login
                 if member.user_type == 'OC':

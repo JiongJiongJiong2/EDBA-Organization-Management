@@ -4,7 +4,7 @@ import sqlite3
 import sys  
 import os  
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, BankAccount, Question
+from models import db, Application, ApplicationDocument, Organization, Member, Workspace, Policy, BankAccount, Question, SystemLog
 from flask import current_app
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -16,6 +16,66 @@ from email.mime.multipart import MIMEMultipart
 import json
 
 admin_bp = Blueprint('admin', __name__)
+
+@admin_bp.route('/e_admin/logs')
+def view_logs():
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Get current user
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Get filter parameters
+    activity_type = request.args.get('activity_type')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    organization_id = request.args.get('organization_id')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    # Build query
+    query = db.select(SystemLog).join(Member).join(Organization)
+
+    # Apply filters
+    if activity_type:
+        query = query.filter(SystemLog.activity_type == activity_type)
+    if start_date:
+        query = query.filter(SystemLog.timestamp >= datetime.strptime(start_date, '%Y-%m-%d'))
+    if end_date:
+        end = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+        query = query.filter(SystemLog.timestamp < end)
+    if organization_id:
+        query = query.filter(SystemLog.organization_id == organization_id)
+
+    # Order by timestamp descending
+    query = query.order_by(SystemLog.timestamp.desc())
+
+    # Execute query with pagination
+    pagination = db.paginate(query, page=page, per_page=per_page)
+    logs = pagination.items
+
+    # Get all organizations for the filter dropdown
+    organizations = db.session.execute(db.select(Organization)).scalars().all()
+
+    # Add JSON-formatted details to each log
+    for log in logs:
+        if log.details:
+            try:
+                log.details_json = json.loads(log.details)
+            except json.JSONDecodeError:
+                log.details_json = None
+        else:
+            log.details_json = None
+
+    return render_template('e_admin_logs.html', 
+                         user=user,
+                         logs=logs,
+                         pagination=pagination,
+                         organizations=organizations)
 
 def send_email(to, subject, body):
     """发送邮件的辅助函数"""
