@@ -211,3 +211,8 @@ class SystemLog(db.Model):
 
     user = db.relationship('Member')
     organization = db.relationship('Organization')
+
+    @property
+    def details_json(self):
+        """Get details as a JSON object"""
+        return json.loads(self.details) if self.details else {}
