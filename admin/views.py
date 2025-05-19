@@ -245,6 +245,16 @@ def t_admin_setup_admin():
         return redirect(url_for('admin.t_admin_user_management'))
     
     try:
+        # Check if admin type already exists
+        existing_admin = db.session.execute(
+            db.select(Member)
+            .filter_by(user_type=admin_type, organization_id=0)
+        ).scalar_one_or_none()
+
+        if existing_admin:
+            flash(f'A {admin_type} admin already exists', 'error')
+            return redirect(url_for('admin.t_admin_user_management'))
+
         # Check if user already exists
         existing_user = db.session.execute(
             db.select(Member).filter_by(email=email)
@@ -269,7 +279,8 @@ def t_admin_setup_admin():
             email=email,
             user_type=admin_type,
             organization_id=0,
-            fund=0
+            fund=0,
+            active_status=1  # Set to active immediately
         )
         db.session.add(new_admin)
         db.session.commit()
@@ -406,19 +417,49 @@ def se_admin_approve_application(app_id):
         db.session.add(organization)
         db.session.flush()  # Get the organization_id
 
-        # Initialize M-type service
-        money_service = Service(
-            organization_id=organization.organization_id,
-            service_type='M',
-            status=2,  # Configured
-            url='http://172.16.160.88:8001',
-            path='/api/transfer',
-            method='POST',
-            input_data='{}',
-            output_data='{}',
-            cost=0  # Default cost
-        )
-        db.session.add(money_service)
+        # Initialize all services
+        services_config = [
+            {
+                'type': 'S',
+                'path': '/hw/thesis/search',
+                'status': 2  # Configured
+            },
+            {
+                'type': 'P',
+                'path': '/hw/thesis/pdf',
+                'status': 2
+            },
+            {
+                'type': 'A',
+                'path': '/hw/student/authenticate',
+                'status': 2
+            },
+            {
+                'type': 'R',
+                'path': '/hw/student/record',
+                'status': 2
+            },
+            {
+                'type': 'M',
+                'path': '/hw/bank/transfer',
+                'status': 2
+            }
+        ]
+
+        # Create services
+        for service_config in services_config:
+            service = Service(
+                organization_id=organization.organization_id,
+                service_type=service_config['type'],
+                status=service_config['status'],
+                url='http://172.16.160.88:8001',
+                path=service_config['path'],
+                method='POST',
+                input_data='{}',
+                output_data='{}',
+                cost=0
+            )
+            db.session.add(service)
 
         # Create O-Convener member for the organization
         oc_member = Member(

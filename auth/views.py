@@ -343,12 +343,11 @@ def login():
                     if not existing_services:
                         # Create basic services
                         services = [
-                            {'type': 'S', 'name': 'Thesis Search', 'path': '/api/thesis/search'},
-                            {'type': 'P', 'name': 'PDF Download', 'path': '/api/thesis/download'},
-                            {'type': 'C', 'name': 'Course Info', 'path': '/api/course/info'},
-                            {'type': 'A', 'name': 'Student Authentication', 'path': '/api/student/auth'},
-                            {'type': 'R', 'name': 'Student Records', 'path': '/api/student/records'},
-                            {'type': 'M', 'name': 'Money Transfer', 'path': '/api/transfer'}
+                            {'type': 'S', 'name': 'Thesis Search', 'path': '/hw/thesis/search'},
+                            {'type': 'P', 'name': 'Thesis PDF', 'path': '/hw/thesis/pdf'},
+                            {'type': 'A', 'name': 'Student Authentication', 'path': '/hw/student/authenticate'},
+                            {'type': 'R', 'name': 'Student Records', 'path': '/hw/student/record'},
+                            {'type': 'M', 'name': 'Money Transfer', 'path': '/hw/bank/transfer'}
                         ]
                         # Initialize each service
                         for service in services:

@@ -158,11 +158,20 @@ class DBManager:
                 if user_record:
                     columns = user_record.keys()
                     values = [user_record[col] for col in columns]
+                    
+                    # Find the index of active_status column and set it to 1
+                    try:
+                        active_status_index = list(columns).index('active_status')
+                        values[active_status_index] = 1
+                    except ValueError:
+                        pass  # In case active_status column doesn't exist
+                        
                     placeholders = ','.join(['?' for _ in columns])
                     column_names = ','.join(columns)
 
                     self.cursor.execute(f"INSERT INTO members ({column_names}) VALUES ({placeholders})", values)
                     print("Preserved user with user_id=7")
+
 
                 if org_record:
                     columns = org_record.keys()
@@ -172,6 +181,25 @@ class DBManager:
 
                     self.cursor.execute(f"INSERT INTO organizations ({column_names}) VALUES ({placeholders})", values)
                     print("Preserved organization with organization_id=0")
+
+                # Initialize M-type service for organization_id=0
+                money_service = {
+                    'organization_id': 0,
+                    'service_type': 'M',
+                    'status': 2,  # Configured
+                    'url': 'http://172.16.160.88:8001',
+                    'path': '/hw/bank/transfer',
+                    'method': 'POST',
+                    'input_data': '{}',
+                    'output_data': '{}',
+                    'cost': 0
+                }
+
+                self.cursor.execute("""
+                    INSERT INTO services (organization_id, service_type, status, url, path, method, input_data, output_data, cost)
+                    VALUES (:organization_id, :service_type, :status, :url, :path, :method, :input_data, :output_data, :cost)
+                """, money_service)
+                print("Created M-type service for organization_id=0")
 
                 self.conn.commit()
                 print("\nDatabase reset successfully with preserved records!")

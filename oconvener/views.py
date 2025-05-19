@@ -49,6 +49,10 @@ def process_payment(from_org_id, to_org_id, amount):
             .filter(Service.status == 2)  # Must be configured
         ).scalar_one_or_none()
         
+        print(f"[Payment Debug] Service check - Found service: {payment_service is not None}")
+        if payment_service:
+            print(f"[Payment Debug] Service details - URL: {payment_service.url}, Path: {payment_service.path}")
+        
         if not payment_service:
             return False, "No transfer service available"
         
@@ -64,8 +68,12 @@ def process_payment(from_org_id, to_org_id, amount):
             .filter(BankAccount.organization_id == to_org_id)
         ).scalar_one_or_none()
         
+        print(f"[Payment Debug] Bank accounts - From account found: {from_account is not None}, To account found: {to_account is not None}")
+        
         if not from_account or not to_account:
             return False, "Bank account information not found"
+        
+        print(f"[Payment Debug] Bank details - From: {from_account.bank}/{from_account.name}, To: {to_account.bank}/{to_account.name}")
         
         # Prepare payment data
         payment_data = {
@@ -81,14 +89,19 @@ def process_payment(from_org_id, to_org_id, amount):
         
         # Send payment request
         url = payment_service.url + payment_service.path
+        print(f"[Payment Debug] Sending request to URL: {url}")
+        print(f"[Payment Debug] Request data: {payment_data}")
         response = requests.post(url, json=payment_data)
+        print(f"[Payment Debug] Response status code: {response.status_code}")
+        print(f"[Payment Debug] Response content: {response.text}")
         
         # Handle response
         if response.status_code == 200:
             result = response.json()
+            print(f"[Payment Debug] Parsed JSON response: {result}")
             if result.get('status') == 'success':
                 return True, result
-        return False, "Payment failure!"
+        return False, f"Payment failure! Status code: {response.status_code}"
             
     except Exception as e:
         return False, str(e)
@@ -98,7 +111,7 @@ oconvener_bp = Blueprint('oconvener', __name__)
 # Constants
 API_BASE_URL = "http://172.16.160.88:8001"
 API_ENDPOINTS = {
-    'bank_auth': f"{API_BASE_URL}/api/v1/bank/authenticate"
+    'bank_auth': f"{API_BASE_URL}/hw/bank/authenticate"
 }
 
 # Bank Account Management Routes
@@ -288,6 +301,18 @@ def pay_member_fee():
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
     try:
+        # Check if bank account is configured
+        bank_account = db.session.execute(
+            db.select(BankAccount)
+            .filter_by(organization_id=oc.organization_id)
+        ).scalar_one_or_none()
+
+        if not bank_account:
+            return jsonify({
+                'status': 'error',
+                'message': '请先设置银行账户信息'
+            }), 400
+
         # 获取该组织所有未激活账号
         inactive_members = db.session.execute(
             db.select(Member)
