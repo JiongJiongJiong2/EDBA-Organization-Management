@@ -1,7 +1,9 @@
 import sqlite3
 import os
 import sys
+import pandas as pd
 from tabulate import tabulate
+from datetime import datetime
 
 DB_PATH = 'instance/EDBA.db'
 
@@ -70,12 +72,22 @@ class DBManager:
             except sqlite3.Error as e:
                 print(f"Error backing up table {table}: {e}")
 
-    def restore_data(self):
-        """恢复备份的数据"""
+    def restore_data(self, preserve_specific_records=False):
+        """恢复备份的数据，可选择保留特定记录"""
         for table, data in self.backup.items():
             try:
                 if not data['rows']:
                     continue
+                
+                # 如果需要保留特定记录，且是members表或organizations表，则跳过那些记录
+                if preserve_specific_records and table == 'members':
+                    filtered_rows = [row for row in data['rows'] if row['user_id'] != 7]
+                    print(f"Filtered out user_id=7 from {table} restoration")
+                    data['rows'] = filtered_rows
+                elif preserve_specific_records and table == 'organizations':
+                    filtered_rows = [row for row in data['rows'] if row['organization_id'] != 0]
+                    print(f"Filtered out organization_id=0 from {table} restoration")
+                    data['rows'] = filtered_rows
                 
                 columns = data['columns']
                 placeholders = ','.join(['?' for _ in columns])
@@ -96,12 +108,30 @@ class DBManager:
                 print(f"Error restoring table {table}: {e}")
                 self.conn.rollback()
 
-    def recreate_database(self):
-        """重新创建数据库表"""
+    def recreate_database_preserve_specific(self):
+        """重建数据库，仅保留 user_id=7 和 organization_id=0 的记录"""
         try:
-            print("Backing up existing data...")
-            self.backup_data()
-            
+            print("Backing up specific records...")
+
+            user_record = None
+            org_record = None
+
+            # 备份指定的记录
+            try:
+                self.cursor.execute("SELECT * FROM members WHERE user_id = 7")
+                user_record = self.cursor.fetchone()
+
+                self.cursor.execute("SELECT * FROM organizations WHERE organization_id = 0")
+                org_record = self.cursor.fetchone()
+
+                if not user_record:
+                    print("Warning: User with user_id=7 not found.")
+                if not org_record:
+                    print("Warning: Organization with organization_id=0 not found.")
+            except sqlite3.Error as e:
+                print(f"Error querying specific records: {e}")
+                return
+
             print("\nDropping existing tables...")
             tables = self.get_tables()
             for table in tables:
@@ -110,22 +140,125 @@ class DBManager:
                     print(f"Dropped table: {table}")
                 except sqlite3.Error as e:
                     print(f"Error dropping table {table}: {e}")
-            
+
             print("\nCreating new tables...")
-            # 从models.py读取并创建新表
-            from models import db
-            import app
-            with app.app.app_context():
-                db.create_all()
-                print("Created all new tables")
-            
-            print("\nRestoring data...")
-            self.restore_data()
-            
-            print("\nDatabase recreation completed successfully!")
+            try:
+                from models import db
+                import app
+                with app.app.app_context():
+                    db.create_all()
+                    print("Created all new tables")
+            except Exception as e:
+                print(f"Error creating tables: {e}")
+                raise
+
+            print("\nInserting preserved records...")
+
+            try:
+                if user_record:
+                    columns = user_record.keys()
+                    values = [user_record[col] for col in columns]
+                    placeholders = ','.join(['?' for _ in columns])
+                    column_names = ','.join(columns)
+
+                    self.cursor.execute(f"INSERT INTO members ({column_names}) VALUES ({placeholders})", values)
+                    print("Preserved user with user_id=7")
+
+                if org_record:
+                    columns = org_record.keys()
+                    values = [org_record[col] for col in columns]
+                    placeholders = ','.join(['?' for _ in columns])
+                    column_names = ','.join(columns)
+
+                    self.cursor.execute(f"INSERT INTO organizations ({column_names}) VALUES ({placeholders})", values)
+                    print("Preserved organization with organization_id=0")
+
+                self.conn.commit()
+                print("\nDatabase reset successfully with preserved records!")
+            except Exception as e:
+                print(f"Error inserting preserved records: {e}")
+                self.conn.rollback()
+
         except Exception as e:
-            print(f"Error recreating database: {e}")
+            print(f"Error during reset process: {e}")
             self.conn.rollback()
+
+
+    def export_member_table(self):
+        """导出members表数据到Excel文件，按组织分别导出"""
+        try:
+            # 获取所有组织信息
+            self.cursor.execute("SELECT organization_id, name FROM organizations")
+            organizations = {row['organization_id']: row['name'] for row in self.cursor.fetchall()}
+            
+            if not organizations:
+                print("No organizations found in the database")
+                return
+            
+            # 获取所有成员数据
+            self.cursor.execute("SELECT user_id, email, user_type, fund, organization_id FROM members")
+            all_members = self.cursor.fetchall()
+            
+            if not all_members:
+                print("No data in members table to export")
+                return
+            
+            # 创建输出目录（如果不存在）
+            os.makedirs("exports", exist_ok=True)
+            
+            # 按组织ID分组
+            members_by_org = {}
+            for member in all_members:
+                org_id = member['organization_id']
+                if org_id not in members_by_org:
+                    members_by_org[org_id] = []
+                
+                # 创建一个带有修改后fund值的成员记录
+                member_dict = dict(member)
+                member_dict['fund'] = 100  # 将fund统一设置为100
+                members_by_org[org_id].append(member_dict)
+            
+            # 使用当前时间创建时间戳
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # 为每个组织创建Excel文件
+            exported_files = []
+            for org_id, members in members_by_org.items():
+                # 获取组织名称，如果不存在则使用ID
+                org_name = organizations.get(org_id, f"Unknown_Org_{org_id}")
+                
+                # 创建文件名（替换非法字符）
+                safe_org_name = ''.join(c if c.isalnum() or c in ['-', '_'] else '_' for c in org_name)
+                filename = f"exports/members_{safe_org_name}_{timestamp}.xlsx"
+                
+                # 只保留需要的列
+                df = pd.DataFrame(members)[['email', 'user_type', 'fund']]
+                
+                # 导出到Excel
+                df.to_excel(filename, index=False)
+                exported_files.append((org_name, filename, len(members)))
+            
+            # 输出导出结果
+            print("\nExport Results:")
+            for org_name, filename, count in exported_files:
+                print(f"Organization: {org_name}")
+                print(f"File: {filename}")
+                print(f"Records: {count}")
+                print("-" * 40)
+            
+            print(f"\nTotal organizations exported: {len(exported_files)}")
+            
+        except sqlite3.Error as e:
+            print(f"Error exporting members table: {e}")
+        except Exception as e:
+            print(f"Error during export process: {e}")
+            import traceback
+            traceback.print_exc()
+            
+        except sqlite3.Error as e:
+            print(f"Error exporting member table: {e}")
+        except Exception as e:
+            print(f"Error during export process: {e}")
 
     def add_record(self, table_name):
         try:
@@ -255,11 +388,13 @@ def main():
         print("3. Update record")
         print("4. Delete record")
         print("5. Recreate database")
-        print("6. Exit")
+        print("6. Reset database (preserve specific records)")
+        print("7. Export members table to Excel")
+        print("8. Exit")
         
-        choice = input("\nEnter your choice (1-6): ")
+        choice = input("\nEnter your choice (1-8): ")
         
-        if choice == '6':
+        if choice == '8':
             break
             
         if choice in ['1', '2', '3', '4']:
@@ -292,8 +427,16 @@ def main():
                 db.recreate_database()
             else:
                 print("Operation cancelled.")
+        elif choice == '6':
+            confirm = input("Are you sure you want to reset the database? This will rebuild all tables but preserve specific records. (y/N): ")
+            if confirm.lower() == 'y':
+                db.recreate_database_preserve_specific()
+            else:
+                print("Operation cancelled.")
+        elif choice == '7':
+            db.export_member_table()
         else:
-            print("Invalid choice! Please enter a number between 1 and 6.")
+            print("Invalid choice! Please enter a number between 1 and 8.")
 
     db.close()
     print("\nGoodbye!")
