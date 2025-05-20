@@ -773,6 +773,7 @@ def manage_services(organization_id):
     services = db.session.execute(
         db.select(Service)
         .filter(Service.organization_id == organization_id)
+        .filter(Service.service_type != 'M')  # Exclude services of type 'M'
         .order_by(Service.service_type)
     ).scalars().all()
     
@@ -840,6 +841,7 @@ def configuration_interface():
     services = db.session.execute(
         db.select(Service)
         .filter(Service.organization_id == user.organization_id)
+        .filter(Service.service_type != 'M')  # Exclude services of type 'M'
         .order_by(Service.service_type)
     ).scalars().all()
     
