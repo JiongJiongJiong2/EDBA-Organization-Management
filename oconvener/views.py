@@ -29,6 +29,80 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def process_service_payment(from_org_id, service_id, amount):
+    """
+    处理服务使用的转账
+    参数：
+    - from_org_id: 付款组织ID
+    - service_id: 服务ID (可以获取服务所属组织和其他信息)
+    - amount: 转账金额
+    返回：
+    - (success, result): (bool, response) 成功返回True和响应，失败返回False和错误信息
+    """
+    try:
+        # 获取服务信息
+        service = db.session.get(Service, service_id)
+        if not service:
+            return False, "Service not found"
+
+        # 获取支付服务（类型'M'）
+        payment_service = db.session.execute(
+            db.select(Service)
+            .filter(Service.organization_id == from_org_id)
+            .filter(Service.service_type == 'M')
+            .filter(Service.status == 2)
+        ).scalar_one_or_none()
+        
+        print(f"[Payment Debug] Service check - Found service: {payment_service is not None}")
+
+        if payment_service:
+            print(f"[Payment Debug] Service details - URL: {payment_service.url}, Path: {payment_service.path}")
+
+        if not payment_service:
+            return False, "No transfer service available"
+        
+        # 获取付款方的银行账户
+        from_account = db.session.execute(
+            db.select(BankAccount)
+            .filter(BankAccount.organization_id == from_org_id)
+        ).scalar_one_or_none()
+        
+        # 获取服务提供方的银行账户
+        to_account = db.session.execute(
+            db.select(BankAccount)
+            .filter(BankAccount.organization_id == service.organization_id)
+        ).scalar_one_or_none()
+        
+        if not from_account or not to_account:
+            return False, "Bank account information not found"
+        
+        # 准备支付数据
+        payment_data = {
+            "from_bank": from_account.bank,
+            "from_name": from_account.name,
+            "from_account": from_account.number,
+            "password": from_account.password,
+            "to_bank": to_account.bank,
+            "to_name": to_account.name,
+            "to_account": to_account.number,
+            "amount": amount,
+            "service_type": service.service_type  # 添加服务类型信息
+        }
+        
+        # 发送支付请求
+        url = payment_service.url + payment_service.path
+        response = requests.post(url, json=payment_data)
+        
+        # 处理响应
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 'success':
+                return True, response
+        return False, f"Payment failure! Status code: {response.status_code}"
+            
+    except Exception as e:
+        return False, str(e)
+
 # Payment service utilities
 def check_payment_service(organization_id):
     payment_service = db.session.execute(

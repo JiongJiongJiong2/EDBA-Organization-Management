@@ -30,7 +30,7 @@ def get_service_or_404(service_id):
     return service
 
 def process_payment(user_id, service_id, query_count=1):
-    """Process payment by deducting from user's fund"""
+    """Process payment for service usage"""
     try:
         # Debug logging
         print(f"Processing payment for user {user_id}, service {service_id}, query count {query_count}")
@@ -46,12 +46,30 @@ def process_payment(user_id, service_id, query_count=1):
         total_cost = service.cost * query_count
         print(f"Total cost: {total_cost}, User's fund: {user.fund}")
         
+        # 如果是免费服务，直接返回成功
+        if total_cost == 0:
+            print("Free service, no payment needed")
+            return True, None
+            
         # Check user's fund
         if user.fund < total_cost:
             print("Error: Insufficient funds")
             return False, "Your fund is not enough! Please connect with your O-convener."
             
-        # Update user's fund
+        # 先进行实际转账（如果不是免费服务）
+        from oconvener.views import process_service_payment
+        print("Initiating actual transfer...")
+        success, result = process_service_payment(
+            from_org_id=user.organization_id,
+            service_id=service.service_id,
+            amount=total_cost
+        )
+        
+        if not success:
+            print(f"Transfer failed: {result}")
+            return False, f"Transfer failed: {result}"
+            
+        # 实际转账成功后再扣除fund
         user.fund -= total_cost
         db.session.commit()
         print(f"Payment successful, updated user fund to: {user.fund}")
