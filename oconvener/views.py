@@ -100,11 +100,11 @@ def process_payment(from_org_id, to_org_id, amount):
             result = response.json()
             print(f"[Payment Debug] Parsed JSON response: {result}")
             if result.get('status') == 'success':
-                return True, result
-        return False, f"Payment failure! Status code: {response.status_code}"
+                return True, (result, response)
+        return False, (f"Payment failure! Status code: {response.status_code}", response)
             
     except Exception as e:
-        return False, str(e)
+        return False, (str(e), None)
 
 oconvener_bp = Blueprint('oconvener', __name__)
 
@@ -302,6 +302,12 @@ def get_member_fee_details():
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
     try:
+        # 检查是否已经有激活的PC（不考虑当前可能正在编辑的成员）
+        is_first_pc = not db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+        ).first()
+
         # 获取该组织所有未激活账号
         inactive_members = db.session.execute(
             db.select(Member)
@@ -309,37 +315,19 @@ def get_member_fee_details():
             .filter(Member.user_type.in_(['PP', 'PC', 'CC']))
         ).scalars().all()
 
-        if not inactive_members:
-            return jsonify({
-                'status': 'error',
-                'message': 'No inactive members found'
-            }), 400
-
-        # 统计信息
-        pp_count = 0
-        pc_count = 0
-        cc_count = 0
-        total_cost = 0
-        is_first_pc = True
-
-        # 检查是否已经有激活的PC
-        existing_active_pc = db.session.execute(
-            db.select(Member)
-            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
-        ).first()
+        # 初始化统计信息
+        pp_count = pc_count = cc_count = total_cost = 0
         
-        if existing_active_pc:
-            is_first_pc = False
-
-        # 计算费用和统计各类型成员
-        for member in inactive_members:
-            if member.user_type == 'CC':
-                cc_count += 1
-                total_cost += 100
-            elif member.user_type == 'PC':
-                pc_count += 1
-            elif member.user_type == 'PP':
-                pp_count += 1
+        # 计算费用和统计各类型成员（如果有未激活成员）
+        if inactive_members:
+            for member in inactive_members:
+                if member.user_type == 'CC':
+                    cc_count += 1
+                    total_cost += 100
+                elif member.user_type == 'PC':
+                    pc_count += 1
+                elif member.user_type == 'PP':
+                    pp_count += 1
 
         # 如果是首次添加PC且有PC用户需要激活
         first_pc_fee = 0
@@ -405,21 +393,27 @@ def pay_member_fee():
         ).scalars().all()
 
         if not inactive_members:
-            return jsonify({'status': 'error', 'message': 'No inactive members found'}), 400
+            return jsonify({
+                'status': 'success',
+                'message': 'No members need activation'
+            })
+
+        # 如果有未激活账号，检查是否有银行账户
+        if not bank_account:
+            return jsonify({
+                'status': 'error',
+                'message': '请先设置银行账户信息'
+            }), 400
+
+        # 检查是否已经有激活的PC（不考虑当前可能正在编辑的成员）
+        is_first_pc = not db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+        ).first()
 
         # 计算费用
         total_cost = 0
         pc_count = 0
-        is_first_pc = True
-
-        # 检查是否已经有激活的PC
-        existing_active_pc = db.session.execute(
-            db.select(Member)
-            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
-        ).first()
-        
-        if existing_active_pc:
-            is_first_pc = False
 
         for member in inactive_members:
             if member.user_type == 'CC':
@@ -443,13 +437,13 @@ def pay_member_fee():
             })
 
         # 进行支付
-        success, result = process_payment(
+        success, (result, response) = process_payment(
             from_org_id=oc.organization_id,
             to_org_id=0,  # system organization
             amount=total_cost
         )
 
-        if not isinstance(result, str) and result.get('status') == 'success':
+        if success and not isinstance(result, str):
             # 激活用户
             for member in inactive_members:
                 member.active_status = 1
@@ -473,12 +467,16 @@ def pay_member_fee():
             db.session.commit()
             return jsonify({
                 'status': 'success',
-                'message': f'Successfully activated {len(inactive_members)} members'
+                'message': f'Successfully activated {len(inactive_members)} members',
+                'payment_details': json.loads(response.text)
             })
         else:
+            # Include the response details in error case too
+            error_details = json.loads(response.text) if response and response.text else None
             return jsonify({
                 'status': 'error',
-                'message': 'Payment failure!'
+                'message': 'Payment failure!',
+                'payment_details': error_details if error_details else result
             }), 400
 
     except Exception as e:
@@ -524,20 +522,23 @@ def edit_member(member_id):
             should_deactivate = False
             deactivate_reason = None
 
-            # 检查是否是第一个PC
-            is_first_pc = not db.session.execute(
-                db.select(Member)
-                .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
-                .filter(Member.user_id != member.user_id)  # 排除当前成员
-            ).first()
+            # 根据用户类型决定是否需要取消激活
+            if user_type == 'PC':
+                # 检查是否已经有其他激活的PC
+                existing_pc = db.session.execute(
+                    db.select(Member)
+                    .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+                    .filter(Member.user_id != member.user_id)
+                ).first()
 
-            if user_type == 'PC' and is_first_pc:
-                should_deactivate = True
-                deactivate_reason = "This will be your first PC member and requires payment for activation"
+                if not existing_pc:
+                    should_deactivate = True
+                    deactivate_reason = "This will be your first PC member and requires payment for activation"
             elif user_type == 'CC':
                 should_deactivate = True
                 deactivate_reason = "Private Data Consumer requires payment for activation"
 
+            # 更新成员信息
             member.email = email
             member.user_type = user_type
             if should_deactivate:
