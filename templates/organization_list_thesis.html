@@ -26,8 +26,14 @@
             margin-bottom: 20px;
         }
         .user-info {
-            color: #666;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             margin-top: 10px;
+        }
+        .user-info p {
+            margin: 0;
+            color: #666;
         }
         .org-grid {
             display: grid;
@@ -95,7 +101,18 @@
 <body>
     <div class="header">
         <h2>Thesis Search Organizations</h2>
-        <div class="user-info">Welcome, {{ user.email }}!</div>
+        <div class="user-info">
+            <p>Welcome, {{ user.email }}!</p>
+            <p>Organization: {{ user.organization.name }}</p>
+            <p>Role: {% if user.user_type == 'OC' %}O-Convener
+                     {% elif user.user_type == 'TT' %}T-admin
+                     {% elif user.user_type == 'EE' %}E-admin
+                     {% elif user.user_type == 'SE' %}Senior E-admin
+                     {% elif user.user_type == 'PP' %}Data Provider
+                     {% elif user.user_type == 'PC' %}Public Data Consumer
+                     {% elif user.user_type == 'CC' %}Private Data Consumer
+                     {% else %}{{ user.user_type }}{% endif %}</p>
+        </div>
     </div>
 
     {% if organizations %}

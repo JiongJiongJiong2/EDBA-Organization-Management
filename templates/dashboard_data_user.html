@@ -155,7 +155,15 @@
         <div class="user-info">
             <div class="user-details">
                 <h2>Welcome, {{ user.email }}!</h2>
-                <span>Role: {{ user.user_type }}</span>
+                <span>Organization: {{ user.organization.name }}</span>
+                <span>Role: {% if user.user_type == 'OC' %}O-Convener
+                           {% elif user.user_type == 'TT' %}T-admin
+                           {% elif user.user_type == 'EE' %}E-admin
+                           {% elif user.user_type == 'SE' %}Senior E-admin
+                           {% elif user.user_type == 'PP' %}Data Provider
+                           {% elif user.user_type == 'PC' %}Public Data Consumer
+                           {% elif user.user_type == 'CC' %}Private Data Consumer
+                           {% else %}{{ user.user_type }}{% endif %}</span>
                 <div class="fund-display">Available Fund: {{ user.fund }}</div>
             </div>
             <form action="{{ url_for('auth.logout') }}" method="post">

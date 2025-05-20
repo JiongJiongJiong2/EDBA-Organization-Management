@@ -2,56 +2,159 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Inquiry</title>
     <style>
-        .inquiry-section {
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .batch-upload-info {
-            margin: 10px 0;
-            font-size: 0.9em;
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f7fa;
+        }
+        .header {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .user-info p {
+            margin: 0;
             color: #666;
         }
-        .result-table {
+        .payment-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .payment-info p {
+            margin: 10px 0;
+            color: #666;
+        }
+        .payment-info strong {
+            color: #1976d2;
+        }
+        .section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            color: #1976d2;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+        }
+        .form-group input {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .result-table th, .result-table td {
+            padding: 10px;
             border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        .result-table th {
-            background-color: #f5f5f5;
+            border-radius: 5px;
+            font-size: 14px;
         }
         .button {
             display: inline-block;
-            padding: 8px 16px;
-            margin: 5px;
-            background-color: #4CAF50;
+            padding: 10px 20px;
+            background-color: #1976d2;
             color: white;
-            text-decoration: none;
-            border-radius: 4px;
             border: none;
+            border-radius: 5px;
             cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background-color 0.3s;
         }
         .button:hover {
-            background-color: #45a049;
+            background-color: #1565c0;
+        }
+        .batch-upload-info {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .batch-upload-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .result-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #ddd;
+        }
+        .result-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1976d2;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .back-link:hover {
+            color: #1565c0;
         }
     </style>
 </head>
 <body>
-    <h2>Student Inquiry</h2>
+    <div class="header">
+        <h2>{{ 'Student GPA Inquiry' if service and service.service_type == 'GPA' else 'Student Information Inquiry' }}</h2>
+        <div class="user-info">
+            <p>Welcome, {{ user.email }}!</p>
+            <p>Organization: {{ user.organization.name }}</p>
+            <p>Role: {% if user.user_type == 'OC' %}O-Convener
+                     {% elif user.user_type == 'TT' %}T-admin
+                     {% elif user.user_type == 'EE' %}E-admin
+                     {% elif user.user_type == 'SE' %}Senior E-admin
+                     {% elif user.user_type == 'PP' %}Data Provider
+                     {% elif user.user_type == 'PC' %}Public Data Consumer
+                     {% elif user.user_type == 'CC' %}Private Data Consumer
+                     {% else %}{{ user.user_type }}{% endif %}</p>
+        </div>
+    </div>
+
     {% if service %}
     <!-- Add SheetJS library for Excel parsing -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
 
-    <div class="payment-info" style="margin: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f8f9fa;">
-        <h4>Payment Information</h4>
+    <div class="payment-info">
+        <h3>Payment Information</h3>
         <p>Your current fund: <strong>{{ user.fund }}</strong></p>
         <p>Service cost per query: <strong>{{ service.cost }}</strong></p>
         <div id="total-cost" style="display: none;">
@@ -59,11 +162,95 @@
         </div>
     </div>
 
+    <div class="section">
+        <h3>Single Query</h3>
+        <form id="inquiryForm" method="post" 
+              action="{{ url_for('user.submit_inquiry', service_id=service.service_id) }}" 
+              enctype="multipart/form-data">
+            {% for field_name, field_type in service.input_json.items() %}
+            <div class="form-group">
+                <label for="{{ field_name }}">{{ field_name }}:</label>
+                {% if field_type == "file" %}
+                    <input type="file" id="{{ field_name }}" name="{{ field_name }}" required>
+                {% else %}
+                    <input type="{{ 'text' if field_type == 'string' else field_type }}" 
+                           id="{{ field_name }}" 
+                           name="{{ field_name }}" 
+                           required>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" name="submit" class="button">Submit Query</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <h3>Batch Query</h3>
+        <form id="batchInquiryForm" method="post" 
+              action="{{ url_for('user.submit_batch_' + ('gpa' if service.service_type == 'GPA' else 'inquiry'), service_id=service.service_id) }}" 
+              enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="batch_file">Upload Excel File:</label>
+                <input type="file" id="batch_file" name="batch_file" accept=".xlsx" required>
+            </div>
+            <div class="batch-upload-info">
+                <p>Note: Please upload an Excel file (.xlsx) with the following columns:</p>
+                <ul>
+                    {% for field_name, field_type in service.input_json.items() %}
+                        <li>{{ field_name }}</li>
+                    {% endfor %}
+                </ul>
+                <a href="{{ url_for('user.download_' + ('gpa_template' if service.service_type == 'GPA' else 'template'), service_id=service.service_id) }}" 
+                   class="button">Download Template</a>
+            </div>
+            <button type="submit" class="button">Submit Batch Query</button>
+        </form>
+    </div>
+
+    {% if result %}
+        <div class="section">
+            {% if result is mapping %}
+                <h3>Result:</h3>
+                <pre>{{ result | tojson(indent=2) }}</pre>
+            {% else %}
+                <h3>Batch Results</h3>
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Row</th>
+                            <th>Status</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in result %}
+                        <tr>
+                            <td>{{ row.row_number }}</td>
+                            <td>{{ row.status }}</td>
+                            <td>
+                                {% if row.result is mapping %}
+                                    <pre>{{ row.result | tojson(indent=2) }}</pre>
+                                {% else %}
+                                    {{ row.result }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if result|length > 0 %}
+                    <div style="margin-top: 20px;">
+                        <a href="{{ url_for('user.download_' + ('gpa_results' if service.service_type == 'GPA' else 'results'), service_id=service.service_id) }}" 
+                           class="button">Download Results as Excel</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+
     <script>
-        // Store the cost per query in a global variable
         var COST_PER_QUERY = parseFloat("{{ service.cost }}");
         
-        // Add event listener after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             var batchFileInput = document.getElementById('batch_file');
             var totalCostDiv = document.getElementById('total-cost');
@@ -98,104 +285,12 @@
             }
         });
     </script>
-        {# Service type specific title #}
-        <h2>{{ 'Student GPA Inquiry' if service.service_type == 'GPA' else 'Student Information Inquiry' }}</h2>
-        
-        <div class="inquiry-section">
-            <h3>Single Query</h3>
-            <form id="inquiryForm" method="post" 
-                  action="{{ url_for('user.submit_inquiry', service_id=service.service_id) }}" 
-                  enctype="multipart/form-data">
-            {% for field_name, field_type in service.input_json.items() %}
-                <div style="margin: 10px 0;">
-                    <label for="{{ field_name }}">{{ field_name }}:</label>
-                    {% if field_type == "file" %}
-                        <input type="file" id="{{ field_name }}" name="{{ field_name }}" required>
-                    {% else %}
-                        <input type="{{ 'text' if field_type == 'string' else field_type }}" 
-                               id="{{ field_name }}" 
-                               name="{{ field_name }}" 
-                               required>
-                    {% endif %}
-                </div>
-            {% endfor %}
-                <button type="submit" name="submit">Submit Query</button>
-            </form>
-        </div>
-
-        <div class="inquiry-section">
-            <h3>Batch Query</h3>
-            <form id="batchInquiryForm" method="post" 
-                  action="{{ url_for('user.submit_batch_' + ('gpa' if service.service_type == 'GPA' else 'inquiry'), service_id=service.service_id) }}" 
-                  enctype="multipart/form-data">
-                <div style="margin: 10px 0;">
-                    <label for="batch_file">Upload Excel File:</label>
-                    <input type="file" id="batch_file" name="batch_file" accept=".xlsx" required>
-                </div>
-                <div class="batch-upload-info">
-                    <p>Note: Please upload an Excel file (.xlsx) with the following columns:</p>
-                    <ul>
-                        {% for field_name, field_type in service.input_json.items() %}
-                            <li>
-                                {{ field_name }}
-                                {% if field_type == "file" %}
-                                    <!-- <span style="color: #666;">(Create a folder named 'files' and put your files there, then write the filename in this column)</span> -->
-                                {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    <a href="{{ url_for('user.download_' + ('gpa_template' if service.service_type == 'GPA' else 'template'), service_id=service.service_id) }}" 
-                       class="button">Download Template</a>
-                </div>
-                <button type="submit">Submit Batch Query</button>
-            </form>
-        </div>
-
-        {% if result %}
-            <div style="margin-top: 20px;">
-                {% if result is mapping %}
-                    <h3>Result:</h3>
-                    <pre>{{ result | tojson(indent=2) }}</pre>
-                {% else %}
-                    <h3>Batch Results:</h3>
-                    <table class="result-table">
-                        <thead>
-                            <tr>
-                                <th>Row</th>
-                                <th>Status</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in result %}
-                            <tr>
-                                <td>{{ row.row_number }}</td>
-                                <td>{{ row.status }}</td>
-                                <td>
-                                    {% if row.result is mapping %}
-                                        <pre>{{ row.result | tojson(indent=2) }}</pre>
-                                    {% else %}
-                                        {{ row.result }}
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% if result|length > 0 %}
-                        <div style="margin-top: 10px;">
-                            <a href="{{ url_for('user.download_' + ('gpa_results' if service.service_type == 'GPA' else 'results'), service_id=service.service_id) }}" 
-                               class="button">Download Results as Excel</a>
-                        </div>
-                    {% endif %}
-                {% endif %}
-            </div>
-        {% endif %}
     {% else %}
-        <p>Service not found or unavailable.</p>
+        <div class="section">
+            <p>Service not found or unavailable.</p>
+        </div>
     {% endif %}
-
-    <br>
-    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}">Back to Dashboard</a>
+    
+    <a href="{{ url_for('user.dashboard', user_type=session.get('user_type')) }}" class="back-link">← Back to Dashboard</a>
 </body>
 </html>
