@@ -293,6 +293,10 @@ def login():
                             # 根据通配符规则创建新用户
                             try:
                                 member = create_member_from_wildcard(email, wildcard_member)
+                                # 检查新创建用户的激活状态
+                                if not member.active_status:
+                                    flash('账号未激活，请联系组织召集人', 'danger')
+                                    return redirect(url_for('auth.login'))
                             except Exception as e:
                                 flash(f'创建用户失败: {str(e)}', 'danger')
                                 return redirect(url_for('auth.login'))

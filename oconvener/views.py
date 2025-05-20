@@ -341,15 +341,21 @@ def add_member():
             flash('A member with this email already exists', 'error')
             return redirect(url_for('oconvener.list_a'))
         
-        # 根据类型和是否为通配符邮箱决定激活状态
-        if user_type == 'PC' and email.startswith('*@'):
-            # PC类型的通配符邮箱直接激活
-            active_status = 1
+        # 检查是否已有激活的PC用户（包括通配符和非通配符）
+        existing_pc = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+        ).first()
+
+        # 根据用户类型决定激活状态
+        if user_type == 'PC':
+            # PC用户：只有当已存在激活的PC用户时才自动激活
+            active_status = 0 if not existing_pc else 1
         elif user_type == 'PP':
-            # PP类型继续保持自动激活
+            # PP用户继续保持自动激活
             active_status = 1
         else:
-            # 其他情况（普通PC或CC）保持未激活
+            # 其他用户类型（如CC）保持未激活
             active_status = 0
         
         new_member = Member(
@@ -710,15 +716,21 @@ def batch_import_members():
                     error_count += 1
                     continue
                 
-                # 根据类型和是否为通配符邮箱决定激活状态
-                if row['user_type'] == 'PC' and row['email'].startswith('*@'):
-                    # PC类型的通配符邮箱直接激活
-                    active_status = 1
+                # 检查是否已有激活的PC用户（包括通配符和非通配符）
+                existing_pc = db.session.execute(
+                    db.select(Member)
+                    .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+                ).first()
+
+                # 根据用户类型决定激活状态
+                if row['user_type'] == 'PC':
+                    # PC用户：只有当已存在激活的PC用户时才自动激活
+                    active_status = 0 if not existing_pc else 1
                 elif row['user_type'] == 'PP':
-                    # PP类型继续保持自动激活
+                    # PP用户继续保持自动激活
                     active_status = 1
                 else:
-                    # 其他情况（普通PC或CC）保持未激活
+                    # 其他用户类型（如CC）保持未激活
                     active_status = 0
 
                 existing_member = db.session.execute(

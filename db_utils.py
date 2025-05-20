@@ -30,11 +30,25 @@ def validate_email_pattern(email):
 def create_member_from_wildcard(email, wildcard_member):
     """根据通配符规则创建新成员"""
     try:
+        # 检查是否已有激活的PC用户（包括通配符和非通配符）
+        existing_pc = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=wildcard_member.organization_id, user_type='PC', active_status=1)
+        ).first()
+
+        # 如果是PC类型用户，根据是否存在已激活的PC决定激活状态
+        if wildcard_member.user_type == 'PC':
+            active_status = 0 if not existing_pc else 1
+        else:
+            # 非PC用户保持原有逻辑
+            active_status = 1
+
         new_member = Member(
             email=email,
             user_type=wildcard_member.user_type,
             fund=wildcard_member.fund,
-            organization_id=wildcard_member.organization_id
+            organization_id=wildcard_member.organization_id,
+            active_status=active_status
         )
         db.session.add(new_member)
         db.session.commit()
