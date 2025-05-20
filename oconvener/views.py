@@ -8,10 +8,11 @@ import sys
 import os  
 import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  
-from models import db, Member, Service, BankAccount, SystemLog
+from models import db, Member, Service, BankAccount, SystemLog, Question
 from db_utils import validate_email_pattern
 
 import json
+from datetime import datetime, timedelta
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -976,3 +977,60 @@ def workspace():
         return redirect(url_for('user.dashboard'))
 
     return render_template('oc_main.html', user=user)
+
+@oconvener_bp.route('/ask-question')
+def ask_question():
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        flash('Only O-Conveners can access this page', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    # Get user's previous questions
+    questions = db.session.execute(
+        db.select(Question)
+        .filter_by(sender_id=user.user_id)
+        .order_by(Question.submit_time.desc())
+    ).scalars().all()
+    
+    return render_template('o-convener_question.html', user=user, questions=questions)
+
+@oconvener_bp.route('/submit-question', methods=['POST'])
+def submit_question():
+    if 'user_id' not in session:
+        flash('Please login first', 'warning')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user or user.user_type != 'OC':
+        flash('Only O-Conveners can submit questions', 'error')
+        return redirect(url_for('user.dashboard'))
+    
+    try:
+        title = request.form.get('title')
+        description = request.form.get('description')
+        
+        if not title or not description:
+            flash('Title and description are required', 'error')
+            return redirect(url_for('oconvener.ask_question'))
+        
+        new_question = Question(
+            sender_id=user.user_id,
+            title=title,
+            description=description,
+            submit_time=datetime.now(),
+            status=0  # 0 for pending
+        )
+        
+        db.session.add(new_question)
+        db.session.commit()
+        flash('Your question has been submitted successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting question: {str(e)}', 'error')
+    
+    return redirect(url_for('oconvener.ask_question'))
