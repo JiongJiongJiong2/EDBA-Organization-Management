@@ -385,7 +385,7 @@
             <h2 class="card-title">Edit Member</h2>
             <form id="editMemberForm" method="post">
                 <div style="margin-bottom: 1rem;">
-                    <input type="email" name="email" id="editEmail" class="form-control" required>
+                    <input type="text" name="email" id="editEmail" class="form-control" required>
                 </div>
                 <div style="margin-bottom: 1rem;">
                     <select name="user_type" id="editUserType" class="form-control" required>
@@ -404,6 +404,16 @@
                     <button type="button" onclick="proceedWithSave()" class="btn btn-primary">Proceed</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <h2 class="card-title">Success</h2>
+            <p style="margin: 1.5rem 0; text-align: center; color: #4caf50; font-size: 1.1em;">
+                Payment processed successfully! The members will be activated.
+            </p>
         </div>
     </div>
 
@@ -496,15 +506,16 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                        if (data.status === 'success' && data.message.includes('without fee')) {
-                            const errorDiv = document.getElementById('errorMessage');
-                            errorDiv.querySelector('p').style.color = '#4caf50';  // Change to green for success
-                            errorDiv.querySelector('p').textContent = data.message;
-                            document.getElementById('feeDetails').style.display = 'none';
-                            errorDiv.style.display = 'block';
-                            setTimeout(() => window.location.reload(), 1500);  // Reload after showing success message
-                        } else if (data.status === 'success') {
-                            window.location.reload();
+                        if (data.status === 'success') {
+                            // Close payment and confirmation modals
+                            document.getElementById('membershipFeeModal').style.display = 'none';
+                            document.getElementById('confirmationModal').style.display = 'none';
+                            
+                            // Show success modal
+                            document.getElementById('successModal').style.display = 'block';
+                            
+                            // Reload page after 2 seconds
+                            setTimeout(() => window.location.reload(), 2000);
                         } else {
                             const errorDiv = document.getElementById('errorMessage');
                             errorDiv.querySelector('p').textContent = data.message;
@@ -624,6 +635,7 @@
             const editModal = document.getElementById('editMemberModal');
             const feeModal = document.getElementById('membershipFeeModal');
             const confirmModal = document.getElementById('confirmationModal');
+            const successModal = document.getElementById('successModal');
             
             if (event.target == editModal) {
                 closeEditModal();
@@ -631,6 +643,8 @@
                 closeFeeModal();
             } else if (event.target == confirmModal) {
                 confirmModal.style.display = 'none';
+            } else if (event.target == successModal) {
+                successModal.style.display = 'none';
             }
         }
     </script>

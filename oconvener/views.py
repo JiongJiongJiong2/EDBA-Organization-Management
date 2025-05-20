@@ -259,20 +259,16 @@ def add_member():
             flash('A member with this email already exists', 'error')
             return redirect(url_for('oconvener.list_a'))
         
-        # 检查是否有匹配的邮箱模式
-        should_auto_activate = False
-        if user_type == 'PC' and '@' in email:
-            domain = email[email.index('@'):]
-            pattern = f'*{domain}'
-            existing_pattern = db.session.execute(
-                "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
-                [oc.organization_id, pattern]
-            ).first()
-            should_auto_activate = bool(existing_pattern)
-        
-        # 根据用户类型和规则决定是否自动激活
-        # PP 账户直接激活，PC需要检查pattern匹配是否自动激活，CC需要付费激活
-        active_status = 1 if (user_type == 'PP' or should_auto_activate) else 0
+        # 根据类型和是否为通配符邮箱决定激活状态
+        if user_type == 'PC' and email.startswith('*@'):
+            # PC类型的通配符邮箱直接激活
+            active_status = 1
+        elif user_type == 'PP':
+            # PP类型继续保持自动激活
+            active_status = 1
+        else:
+            # 其他情况（普通PC或CC）保持未激活
+            active_status = 0
         
         new_member = Member(
             email=email,
@@ -447,22 +443,6 @@ def pay_member_fee():
             # 激活用户
             for member in inactive_members:
                 member.active_status = 1
-            
-            # 如果存在*@格式的PC邮箱，添加到patterns表
-            for member in inactive_members:
-                if member.user_type == 'PC' and '*@' in member.email:
-                    pattern = member.email[member.email.index('*@'):]
-                    # 检查是否已存在相同的pattern
-                    existing_pattern = db.session.execute(
-                        "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
-                        [oc.organization_id, pattern]
-                    ).first()
-                    
-                    if not existing_pattern:
-                        db.session.execute(
-                            'INSERT INTO email_patterns (organization_id, pattern) VALUES (?, ?)',
-                            [oc.organization_id, pattern]
-                        )
             
             db.session.commit()
             return jsonify({
@@ -645,20 +625,16 @@ def batch_import_members():
                     error_count += 1
                     continue
                 
-                # 检查是否有匹配的邮箱模式，以及是否需要自动激活
-                should_auto_activate = False
-                if row['user_type'] == 'PC' and '@' in row['email']:
-                    domain = row['email'][row['email'].index('@'):]
-                    pattern = f'*{domain}'
-                    existing_pattern = db.session.execute(
-                        "SELECT 1 FROM email_patterns WHERE organization_id = ? AND pattern = ?",
-                        [oc.organization_id, pattern]
-                    ).first()
-                    should_auto_activate = bool(existing_pattern)
-
-                # 根据规则确定激活状态
-                # PP 账户直接激活，PC需要检查pattern匹配是否自动激活，CC需要付费激活
-                active_status = 1 if (row['user_type'] == 'PP' or should_auto_activate) else 0
+                # 根据类型和是否为通配符邮箱决定激活状态
+                if row['user_type'] == 'PC' and row['email'].startswith('*@'):
+                    # PC类型的通配符邮箱直接激活
+                    active_status = 1
+                elif row['user_type'] == 'PP':
+                    # PP类型继续保持自动激活
+                    active_status = 1
+                else:
+                    # 其他情况（普通PC或CC）保持未激活
+                    active_status = 0
 
                 existing_member = db.session.execute(
                     db.select(Member).filter_by(email=row['email'])
