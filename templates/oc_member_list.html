@@ -297,7 +297,7 @@
                                 <button onclick="openEditModal('{{ member.user_id }}', '{{ member.email }}', '{{ member.user_type }}')" 
                                         class="btn btn-primary" style="margin-right: 0.5rem;">Edit</button>
                                 <form action="{{ url_for('oconvener.delete_member', member_id=member.user_id) }}" method="post" style="display:inline;">
-                                    <button type="submit" onclick="return confirm('Are you sure you want to delete this member?')" 
+                                    <button type="button" onclick="confirmDelete(this.form)" 
                                             class="btn btn-danger">Delete</button>
                                 </form>
                             </td>
@@ -308,6 +308,75 @@
             </div>
         </div>
     </main>
+
+    <!-- Membership Fee Modal -->
+    <div id="membershipFeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFeeModal()">&times;</span>
+            <h2 class="card-title">Membership Fee Details</h2>
+            <div id="feeBreakdown" style="margin: 1.5rem 0;">
+                <div class="fee-rules" style="margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                    <h3 style="margin-bottom: 0.5rem; color: #1e88e5;">Access Right Levels and Fees:</h3>
+                    <p>Level 1 (Public Data Consumer): 1000 RMB for first PC registration</p>
+                    <p>Level 2 (Private Data Consumer): 100 RMB/person</p>
+                    <p>Level 3 (Data Provider): Free</p>
+                </div>
+
+                <div id="loadingMessage" style="text-align: center; display: none;">
+                    <p>Loading fee details...</p>
+                </div>
+                <div id="errorMessage" style="text-align: center; display: none;">
+                    <p style="color: #dc3545; margin-bottom: 1rem;"></p>
+                </div>
+                <div id="feeDetails" style="display: none;">
+                    <div id="activationMessage" style="margin-bottom: 1rem; padding: 0.75rem; background: #e3f2fd; border-radius: 4px; color: #1565c0;"></div>
+                    
+                    <table style="width: 100%; margin-bottom: 1.5rem;">
+                        <tr>
+                            <td>Data Provider (PP):</td>
+                            <td id="ppCount">0</td>
+                        </tr>
+                        <tr>
+                            <td>Public Data Consumer (PC):</td>
+                            <td id="pcCount">0</td>
+                        </tr>
+                        <tr id="firstPcRow" style="display: none;">
+                            <td>First PC registration fee:</td>
+                            <td>1000 RMB</td>
+                        </tr>
+                        <tr>
+                            <td>Private Data Consumer (CC):</td>
+                            <td id="ccCount">0</td>
+                        </tr>
+                        <tr>
+                            <td>CC member fee (100 RMB each):</td>
+                            <td id="ccFee">0</td>
+                        </tr>
+                        <tr style="font-weight: bold; border-top: 2px solid #e0e0e0; margin-top: 0.5rem;">
+                            <td>Total Cost:</td>
+                            <td id="totalCost">0</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-actions" style="text-align: right;">
+                    <button class="btn" style="background: #e0e0e0; margin-right: 0.5rem;" onclick="closeFeeModal()">Cancel</button>
+                    <button id="proceedPaymentBtn" class="btn btn-primary" style="display: none;" onclick="proceedWithPayment()">Proceed with Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content">
+            <h2 class="card-title">Confirm Role Change</h2>
+            <p id="confirmationMessage" style="margin: 1.5rem 0; padding: 1rem; background: #fff3e0; border-radius: 4px; color: #e65100;"></p>
+            <div style="text-align: right;">
+                <button class="btn" style="background: #e0e0e0; margin-right: 0.5rem;" onclick="document.getElementById('confirmationModal').style.display='none'">Cancel</button>
+                <button id="confirmProceedBtn" class="btn btn-primary">Proceed</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit Member Modal -->
     <div id="editMemberModal" class="modal">
@@ -325,15 +394,100 @@
                         <option value="CC">Private Data Consumer</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <button type="button" onclick="closeEditModal()" class="btn" style="background: #e0e0e0;">Cancel</button>
+                <div id="editFormButtons">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" onclick="closeEditModal()" class="btn" style="background: #e0e0e0;">Cancel</button>
+                </div>
+                <div id="confirmButtons" style="display: none; text-align: right;">
+                    <p id="warningMessage" style="margin: 1rem 0; padding: 1rem; background: #fff3e0; border-radius: 4px; color: #e65100;"></p>
+                    <button type="button" onclick="cancelConfirm()" class="btn" style="background: #e0e0e0; margin-right: 0.5rem;">Cancel</button>
+                    <button type="button" onclick="proceedWithSave()" class="btn btn-primary">Proceed</button>
+                </div>
             </form>
         </div>
     </div>
 
     <script>
+        function cancelConfirm() {
+            document.getElementById('confirmButtons').style.display = 'none';
+            document.getElementById('editFormButtons').style.display = 'block';
+        }
+
+        function proceedWithSave() {
+            const form = document.getElementById('editMemberForm');
+            form._confirmed = true; // Add flag to prevent recursion
+            form.submit();
+        }
+
         document.getElementById('payMemberFeeBtn').addEventListener('click', function() {
-            if (confirm('Are you sure you want to pay the membership fee for all inactive members?')) {
+            showFeeDetails();
+        });
+        function showFeeDetails() {
+            const modal = document.getElementById('membershipFeeModal');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const feeDetails = document.getElementById('feeDetails');
+            const proceedBtn = document.getElementById('proceedPaymentBtn');
+
+            modal.style.display = 'block';
+            loadingMessage.style.display = 'block';
+            feeDetails.style.display = 'none';
+            proceedBtn.style.display = 'none';
+
+            fetch('/oconvener/get-member-fee-details')
+                .then(response => response.json())
+                .then(data => {
+                    loadingMessage.style.display = 'none';
+                    if (data.status === 'success') {
+                        const details = data.details;
+                        document.getElementById('ppCount').textContent = details.pp_count;
+                        document.getElementById('pcCount').textContent = details.pc_count;
+                        document.getElementById('ccCount').textContent = details.cc_count;
+                        document.getElementById('ccFee').textContent = details.cc_count * 100;
+                        document.getElementById('totalCost').textContent = details.total_cost + ' RMB';
+                        document.getElementById('activationMessage').textContent = details.activation_message;
+
+                        // Show/hide first PC fee row
+                        const firstPcRow = document.getElementById('firstPcRow');
+                        if (details.is_first_pc && details.pc_count > 0) {
+                            firstPcRow.style.display = '';
+                        } else {
+                            firstPcRow.style.display = 'none';
+                        }
+
+                        feeDetails.style.display = 'block';
+                        if (details.total_cost > 0) {
+                            proceedBtn.style.display = 'inline-block';
+                        }
+                    } else {
+                        const errorDiv = document.getElementById('errorMessage');
+                        errorDiv.querySelector('p').textContent = data.message;
+                        loadingMessage.style.display = 'none';
+                        errorDiv.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    const errorDiv = document.getElementById('errorMessage');
+                    errorDiv.querySelector('p').textContent = 'Error fetching fee details: ' + error;
+                    loadingMessage.style.display = 'none';
+                    errorDiv.style.display = 'block';
+                });
+        }
+
+        function closeFeeModal() {
+            document.getElementById('membershipFeeModal').style.display = 'none';
+        }
+
+        function proceedWithPayment() {
+            const confirmModal = document.getElementById('confirmationModal');
+            const confirmMsg = document.getElementById('confirmationMessage');
+            const proceedBtn = document.getElementById('confirmProceedBtn');
+            
+            confirmMsg.innerHTML = 'Are you sure you want to proceed with the payment?';
+            confirmModal.style.display = 'block';
+            
+            // Handle proceed button
+            proceedBtn.onclick = () => {
+                confirmModal.style.display = 'none';
                 fetch('/oconvener/pay-member-fee', {
                     method: 'POST',
                     headers: {
@@ -342,35 +496,141 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        alert(data.message);
-                        window.location.reload();
-                    } else {
-                        alert(data.message);
-                    }
+                        if (data.status === 'success' && data.message.includes('without fee')) {
+                            const errorDiv = document.getElementById('errorMessage');
+                            errorDiv.querySelector('p').style.color = '#4caf50';  // Change to green for success
+                            errorDiv.querySelector('p').textContent = data.message;
+                            document.getElementById('feeDetails').style.display = 'none';
+                            errorDiv.style.display = 'block';
+                            setTimeout(() => window.location.reload(), 1500);  // Reload after showing success message
+                        } else if (data.status === 'success') {
+                            window.location.reload();
+                        } else {
+                            const errorDiv = document.getElementById('errorMessage');
+                            errorDiv.querySelector('p').textContent = data.message;
+                            document.getElementById('feeDetails').style.display = 'none';
+                            errorDiv.style.display = 'block';
+                        }
                 })
                 .catch(error => {
-                    alert('Error processing payment: ' + error);
+                    const errorDiv = document.getElementById('errorMessage');
+                    errorDiv.querySelector('p').textContent = 'Error processing payment: ' + error;
+                    document.getElementById('feeDetails').style.display = 'none';
+                    errorDiv.style.display = 'block';
                 });
             }
-        });
+        }
 
         function openEditModal(memberId, email, userType) {
+            const form = document.getElementById('editMemberForm');
+            
+            // Reset form state
+            form._confirmed = false;
+            document.getElementById('confirmButtons').style.display = 'none';
+            document.getElementById('editFormButtons').style.display = 'block';
+            document.getElementById('warningMessage').innerHTML = '';
+
+            // Set modal values
             document.getElementById('editMemberModal').style.display = 'block';
             document.getElementById('editEmail').value = email;
             document.getElementById('editUserType').value = userType;
-            document.getElementById('editMemberForm').action = '/oconvener/edit-member/' + memberId;
+            form.action = '/oconvener/edit-member/' + memberId;
+
+            // Store original values
+            form.dataset.originalType = userType;
+            
+            // Check if member is active
+            const row = document.querySelector(`button[onclick*="'${memberId}'"]`).closest('tr');
+            const isActive = row.querySelector('.status-badge').classList.contains('active');
+            form.dataset.isActive = isActive;
+
+            // Add submit handler
+            form.onsubmit = async function(e) {
+                if (this._confirmed) {
+                    return true; // Allow form submission if already confirmed
+                }
+
+                e.preventDefault();
+                const newType = document.getElementById('editUserType').value;
+                const originalType = form.dataset.originalType;
+                
+                // If type not changed, submit directly
+                if (newType === originalType) {
+                    return true;
+                }
+                
+                // Only check for activation changes if currently active
+                if (form.dataset.isActive === 'true') {
+                    let message = null;
+                    let shouldConfirm = false;
+                    
+                    if (newType === 'CC') {
+                        message = "Changing to Private Data Consumer (CC) will deactivate this member.<br><br>" +
+                                "A payment of <strong>100 RMB</strong> will be required for reactivation.";
+                        shouldConfirm = true;
+                    } else if (newType === 'PC') {
+                        try {
+                            const response = await fetch('/oconvener/get-member-fee-details');
+                            const data = await response.json();
+                            if (data.status === 'success' && data.details.is_first_pc) {
+                                message = "This will be your first Public Data Consumer (PC).<br><br>" +
+                                        "The member will be deactivated and require a payment of <strong>1000 RMB</strong> for registration.";
+                                shouldConfirm = true;
+                            }
+                        } catch (error) {
+                            console.error('Error checking PC status:', error);
+                        }
+                    }
+
+                    if (shouldConfirm) {
+                        document.getElementById('warningMessage').innerHTML = message;
+                        document.getElementById('editFormButtons').style.display = 'none';
+                        document.getElementById('confirmButtons').style.display = 'block';
+                        return false;
+                    }
+                }
+                
+                return true;
+            };
         }
 
         function closeEditModal() {
+            const form = document.getElementById('editMemberForm');
+            form._confirmed = false;
+            document.getElementById('confirmButtons').style.display = 'none';
+            document.getElementById('editFormButtons').style.display = 'block';
+            document.getElementById('warningMessage').innerHTML = '';
             document.getElementById('editMemberModal').style.display = 'none';
         }
 
-        // Close modal when clicking outside
+        // Close modals when clicking outside
+        function confirmDelete(form) {
+            const confirmModal = document.getElementById('confirmationModal');
+            const confirmMsg = document.getElementById('confirmationMessage');
+            const proceedBtn = document.getElementById('confirmProceedBtn');
+            
+            confirmMsg.innerHTML = "Are you sure you want to delete this member?<br><br>" +
+                                 "<strong>This action cannot be undone.</strong>";
+            confirmModal.style.display = 'block';
+            
+            // Handle proceed button
+            proceedBtn.onclick = () => {
+                confirmModal.style.display = 'none';
+                form.submit();
+            };
+        }
+
         window.onclick = function(event) {
-            const modal = document.getElementById('editMemberModal');
-            if (event.target == modal) {
+            const editModal = document.getElementById('editMemberModal');
+            const feeModal = document.getElementById('membershipFeeModal');
+            const confirmModal = document.getElementById('confirmationModal');
+            
+            if (event.target == editModal) {
                 closeEditModal();
+            } else if (event.target == feeModal) {
+                closeFeeModal();
+            } else if (event.target == confirmModal) {
+                confirmModal.style.display = 'none';
             }
         }
     </script>

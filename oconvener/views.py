@@ -271,7 +271,8 @@ def add_member():
             should_auto_activate = bool(existing_pattern)
         
         # 根据用户类型和规则决定是否自动激活
-        active_status = 1 if (user_type not in ['PP', 'PC', 'CC'] or should_auto_activate) else 0
+        # PP 账户直接激活，PC需要检查pattern匹配是否自动激活，CC需要付费激活
+        active_status = 1 if (user_type == 'PP' or should_auto_activate) else 0
         
         new_member = Member(
             email=email,
@@ -289,6 +290,89 @@ def add_member():
         flash(f'Error adding member: {str(e)}', 'error')
     
     return redirect(url_for('oconvener.list_a'))
+
+@oconvener_bp.route('/get-member-fee-details', methods=['GET'])
+def get_member_fee_details():
+    """获取会员费用详情"""
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Please login first'}), 401
+    
+    oc = db.session.get(Member, session['user_id'])
+    if not oc or oc.user_type != 'OC':
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+
+    try:
+        # 获取该组织所有未激活账号
+        inactive_members = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, active_status=0)
+            .filter(Member.user_type.in_(['PP', 'PC', 'CC']))
+        ).scalars().all()
+
+        if not inactive_members:
+            return jsonify({
+                'status': 'error',
+                'message': 'No inactive members found'
+            }), 400
+
+        # 统计信息
+        pp_count = 0
+        pc_count = 0
+        cc_count = 0
+        total_cost = 0
+        is_first_pc = True
+
+        # 检查是否已经有激活的PC
+        existing_active_pc = db.session.execute(
+            db.select(Member)
+            .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+        ).first()
+        
+        if existing_active_pc:
+            is_first_pc = False
+
+        # 计算费用和统计各类型成员
+        for member in inactive_members:
+            if member.user_type == 'CC':
+                cc_count += 1
+                total_cost += 100
+            elif member.user_type == 'PC':
+                pc_count += 1
+            elif member.user_type == 'PP':
+                pp_count += 1
+
+        # 如果是首次添加PC且有PC用户需要激活
+        first_pc_fee = 0
+        if is_first_pc and pc_count > 0:
+            first_pc_fee = 1000
+            total_cost += first_pc_fee
+
+        # 确定是否需要付费
+        needs_payment = total_cost > 0
+        activation_message = (
+            f"Activating {pp_count} Data Provider(s), {pc_count} Public Data Consumer(s), "
+            f"and {cc_count} Private Data Consumer(s)."
+        )
+
+        return jsonify({
+            'status': 'success',
+            'details': {
+                'pp_count': pp_count,
+                'pc_count': pc_count,
+                'cc_count': cc_count,
+                'is_first_pc': is_first_pc,
+                'first_pc_fee': first_pc_fee,
+                'total_cost': total_cost,
+                'needs_payment': needs_payment,
+                'activation_message': activation_message
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @oconvener_bp.route('/pay-member-fee', methods=['POST'])
 def pay_member_fee():
@@ -435,10 +519,40 @@ def edit_member(member_id):
             flash('A member with this email already exists', 'error')
             return redirect(url_for('oconvener.list_a'))
         
-        member.email = email
-        member.user_type = user_type
-        db.session.commit()
-        flash('Member details updated successfully', 'success')
+        # 只有当成员当前是激活状态时才考虑改变激活状态
+        if member.active_status == 1:
+            should_deactivate = False
+            deactivate_reason = None
+
+            # 检查是否是第一个PC
+            is_first_pc = not db.session.execute(
+                db.select(Member)
+                .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+                .filter(Member.user_id != member.user_id)  # 排除当前成员
+            ).first()
+
+            if user_type == 'PC' and is_first_pc:
+                should_deactivate = True
+                deactivate_reason = "This will be your first PC member and requires payment for activation"
+            elif user_type == 'CC':
+                should_deactivate = True
+                deactivate_reason = "Private Data Consumer requires payment for activation"
+
+            member.email = email
+            member.user_type = user_type
+            if should_deactivate:
+                member.active_status = 0
+                db.session.commit()
+                flash(f'Member role updated. {deactivate_reason}', 'warning')
+            else:
+                db.session.commit()
+                flash('Member details updated successfully', 'success')
+        else:
+            # 未激活的成员保持未激活状态
+            member.email = email
+            member.user_type = user_type
+            db.session.commit()
+            flash('Member details updated successfully', 'success')
         
     except Exception as e:
         db.session.rollback()
@@ -542,7 +656,8 @@ def batch_import_members():
                     should_auto_activate = bool(existing_pattern)
 
                 # 根据规则确定激活状态
-                active_status = 1 if (row['user_type'] not in ['PP', 'PC', 'CC'] or should_auto_activate) else 0
+                # PP 账户直接激活，PC需要检查pattern匹配是否自动激活，CC需要付费激活
+                active_status = 1 if (row['user_type'] == 'PP' or should_auto_activate) else 0
 
                 existing_member = db.session.execute(
                     db.select(Member).filter_by(email=row['email'])
