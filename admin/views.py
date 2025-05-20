@@ -744,6 +744,56 @@ def update_bank_account():
 
 
 # E-Admin Main Page
+@admin_bp.route('/e_admin/question')
+def e_admin_question():
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+    
+    user = db.session.get(Member, session['user_id'])
+    if not user:
+        flash('User information not found', 'error')
+        return redirect(url_for('auth.login'))
+    
+    # Get user's questions
+    questions = db.session.execute(
+        db.select(Question)
+        .filter_by(sender_id=user.user_id)
+        .order_by(Question.submit_time.desc())
+    ).scalars().all()
+    
+    return render_template('e_admin_question.html', user=user, questions=questions)
+
+@admin_bp.route('/e_admin/question/submit', methods=['POST'])
+def e_admin_submit_question():
+    if 'user_id' not in session or session.get('user_type') != 'EE':
+        flash('Unauthorized access', 'error')
+        return redirect(url_for('auth.login'))
+
+    title = request.form.get('title')
+    description = request.form.get('description')
+    
+    if not title or not description:
+        flash('Please fill in all fields', 'error')
+        return redirect(url_for('admin.e_admin_question'))
+    
+    try:
+        question = Question(
+            sender_id=session['user_id'],
+            title=title,
+            description=description,
+            submit_time=datetime.now(),
+            status=0  # 0 for pending
+        )
+        db.session.add(question)
+        db.session.commit()
+        flash('Your question has been submitted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting question: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.e_admin_question'))
+
 @admin_bp.route('/e_admin/main')
 def e_admin_main():
     if 'user_id' not in session or session.get('user_type') != 'EE':
