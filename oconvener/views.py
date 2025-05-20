@@ -91,12 +91,19 @@ def process_service_payment(from_org_id, service_id, amount):
         
         # 发送支付请求
         url = payment_service.url + payment_service.path
+        print(f"[Payment Debug] Sending payment request to: {url}")
+        print(f"[Payment Debug] Payment data: {payment_data}")
+        
         response = requests.post(url, json=payment_data)
+        print(f"[Payment Debug] Response status code: {response.status_code}")
+        print(f"[Payment Debug] Response content: {response.text}")
         
         # 处理响应
         if response.status_code == 200:
             result = response.json()
+            print(f"[Payment Debug] Parsed JSON response: {result}")
             if result.get('status') == 'success':
+                print("[Payment Debug] Transfer successful!")
                 return True, response
         return False, f"Payment failure! Status code: {response.status_code}"
             
