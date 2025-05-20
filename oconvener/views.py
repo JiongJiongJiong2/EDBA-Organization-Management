@@ -379,10 +379,11 @@ def get_member_fee_details():
         return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
 
     try:
-        # 检查是否已经有激活的PC（不考虑当前可能正在编辑的成员）
+        # 检查是否已经有激活的非通配符PC（不考虑当前可能正在编辑的成员）
         is_first_pc = not db.session.execute(
             db.select(Member)
             .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+            .filter(~Member.email.like('*@%'))  # 排除通配符邮箱
         ).first()
 
         # 获取该组织所有未激活账号
@@ -482,10 +483,11 @@ def pay_member_fee():
                 'message': '请先设置银行账户信息'
             }), 400
 
-        # 检查是否已经有激活的PC（不考虑当前可能正在编辑的成员）
+        # 检查是否已经有激活的非通配符PC（不考虑当前可能正在编辑的成员）
         is_first_pc = not db.session.execute(
             db.select(Member)
             .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
+            .filter(~Member.email.like('*@%'))  # 排除通配符邮箱
         ).first()
 
         # 计算费用
@@ -585,11 +587,12 @@ def edit_member(member_id):
 
             # 根据用户类型决定是否需要取消激活
             if user_type == 'PC':
-                # 检查是否已经有其他激活的PC
+                # 检查是否已经有其他激活的非通配符PC
                 existing_pc = db.session.execute(
                     db.select(Member)
                     .filter_by(organization_id=oc.organization_id, user_type='PC', active_status=1)
                     .filter(Member.user_id != member.user_id)
+                    .filter(~Member.email.like('*@%'))  # 排除通配符邮箱
                 ).first()
 
                 if not existing_pc:
