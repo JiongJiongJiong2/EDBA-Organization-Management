@@ -1,5 +1,14 @@
 # EDBA - Organization Management System
 
+```text
+███████╗██████╗ ██████╗  █████╗
+██╔════╝██╔══██╗██╔══██╗██╔══██╗
+█████╗  ██║  ██║██████╔╝███████║
+██╔══╝  ██║  ██║██╔══██╗██╔══██║
+███████╗██████╔╝██████╔╝██║  ██║
+╚══════╝╚═════╝ ╚═════╝ ╚═╝  ╚═╝
+```
+
 A Flask-based organization management system for managing members, services, and applications.
 
 > **Note**: This project was developed in early 2025 as a group assignment for the **Advanced Software Development Workshop** course during my junior year (Year 3) of undergraduate studies. It was built by a team of students as a course project and is not intended for production use. The codebase reflects the learning process and time constraints of a university course project.
