@@ -261,118 +261,113 @@ def login():
                 flash(f'邮件发送失败: {e}', 'danger')
 
         elif 'login' in request.form:
-            # Special case for direct login with code "123456"
-            if input_code == "123456":
-                email_pending = email
-            else:
-                real_code = session.get('verification_code')
-                email_pending = session.get('email_pending')
-                if not (input_code == real_code and email == email_pending):
-                    flash('验证码错误或邮箱不一致，请重试', 'warning')
-                    return redirect(url_for('auth.login'))
+            # Verify the code
+            real_code = session.get('verification_code')
+            email_pending = session.get('email_pending')
+            
+            if not (input_code == real_code and email == email_pending):
+                flash('验证码错误或邮箱不一致，请重试', 'warning')
+                return redirect(url_for('auth.login'))
 
-            # Common login logic for both special code and normal verification
-            if email:  # Changed from True to check for email presence
-                session.pop('verification_code', None)
-                session.pop('email_pending', None)
+            # Clear verification data after successful verification
+            session.pop('verification_code', None)
+            session.pop('email_pending', None)
 
-                # 先尝试精确匹配
-                member = db.session.execute(db.select(Member).filter_by(email=email)).scalar_one_or_none()
-                
-                # Check activation status
-                if member and not member.active_status:
-                    flash('账号未激活，请联系组织召集人', 'danger')
-                    return redirect(url_for('auth.login'))
-                
-                if not member:
-                    # 如果用户不存在，尝试通配符匹配
-                    email_suffix = get_email_suffix(email)
-                    if email_suffix:
-                        wildcard_member = find_matching_wildcard_rule(email_suffix)
-                        if wildcard_member:
-                            # 根据通配符规则创建新用户
-                            try:
-                                member = create_member_from_wildcard(email, wildcard_member)
-                                # 检查新创建用户的激活状态
-                                if not member.active_status:
-                                    flash('账号未激活，请联系组织召集人', 'danger')
-                                    return redirect(url_for('auth.login'))
-                            except Exception as e:
-                                flash(f'创建用户失败: {str(e)}', 'danger')
+            # 先尝试精确匹配
+            member = db.session.execute(db.select(Member).filter_by(email=email)).scalar_one_or_none()
+            
+            # Check activation status
+            if member and not member.active_status:
+                flash('账号未激活，请联系组织召集人', 'danger')
+                return redirect(url_for('auth.login'))
+            
+            if not member:
+                # 如果用户不存在，尝试通配符匹配
+                email_suffix = get_email_suffix(email)
+                if email_suffix:
+                    wildcard_member = find_matching_wildcard_rule(email_suffix)
+                    if wildcard_member:
+                        # 根据通配符规则创建新用户
+                        try:
+                            member = create_member_from_wildcard(email, wildcard_member)
+                            # 检查新创建用户的激活状态
+                            if not member.active_status:
+                                flash('账号未激活，请联系组织召集人', 'danger')
                                 return redirect(url_for('auth.login'))
-                        else:
-                            flash('该用户不存在，请联系组织召集人', 'danger')
+                        except Exception as e:
+                            flash(f'创建用户失败: {str(e)}', 'danger')
                             return redirect(url_for('auth.login'))
                     else:
                         flash('该用户不存在，请联系组织召集人', 'danger')
                         return redirect(url_for('auth.login'))
-
-                # 输出调试信息
-                print(f"User login - Email: {email}, Type: {member.user_type}")
-                
-                # 检查用户类型并标准化
-                if member.user_type.upper() in ['SE', 'SE-ADMIN']:
-                    session['user_type'] = 'SE'
-                elif member.user_type.upper() in ['EE', 'E-ADMIN']:
-                    session['user_type'] = 'EE'
                 else:
-                    session['user_type'] = member.user_type
-                    
-                session['user_id'] = member.user_id
-                session['organization_id'] = member.organization_id
+                    flash('该用户不存在，请联系组织召集人', 'danger')
+                    return redirect(url_for('auth.login'))
 
-                # Log user login
-                log_entry = SystemLog(
-                    user_id=member.user_id,
-                    activity_type='login',
-                    organization_id=member.organization_id,
-                    details=json.dumps({
-                        'action': f'{member.user_type}_login',
-                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        'status': 'success',
-                        'user_email': member.email,
-                        'user_type': member.user_type
-                    })
-                )
-                db.session.add(log_entry)
-                db.session.commit()
-
-                # Initialize services for OC upon first login
-                if member.user_type == 'OC':
-                    # Check if organization has any services
-                    existing_services = db.session.execute(
-                        db.select(Service).filter_by(organization_id=member.organization_id)
-                    ).first()
-                    
-                    if not existing_services:
-                        # Create basic services
-                        services = [
-                            {'type': 'S', 'name': 'Thesis Search', 'path': '/hw/thesis/search'},
-                            {'type': 'P', 'name': 'Thesis PDF', 'path': '/hw/thesis/pdf'},
-                            {'type': 'A', 'name': 'Student Authentication', 'path': '/hw/student/authenticate'},
-                            {'type': 'R', 'name': 'Student Records', 'path': '/hw/student/record'},
-                            {'type': 'M', 'name': 'Money Transfer', 'path': '/hw/bank/transfer'}
-                        ]
-                        # Initialize each service
-                        for service in services:
-                            new_service = Service(
-                                organization_id=member.organization_id,
-                                service_type=service['type'],
-                                status=0,  # Initial status as unconfigured
-                                cost=0,
-                                path=service['path'],
-                                method='POST',  # Default to POST method
-                                url='',  # To be configured by OC
-                                input_data='{}',  # Default empty JSON
-                                output_data='{}'  # Default empty JSON
-                            )
-                            db.session.add(new_service)
-                        db.session.commit()
-
-                flash('登录成功', 'success')
-                print(f"Session user_type set to: {session['user_type']}")  # 调试信息
-                return redirect(url_for('user.dashboard', user_type=session['user_type']))
+            # 输出调试信息
+            print(f"User login - Email: {email}, Type: {member.user_type}")
+            
+            # 检查用户类型并标准化
+            if member.user_type.upper() in ['SE', 'SE-ADMIN']:
+                session['user_type'] = 'SE'
+            elif member.user_type.upper() in ['EE', 'E-ADMIN']:
+                session['user_type'] = 'EE'
             else:
-                flash('验证码错误或邮箱不一致，请重试', 'warning')
+                session['user_type'] = member.user_type
+                
+            session['user_id'] = member.user_id
+            session['organization_id'] = member.organization_id
+
+            # Log user login
+            log_entry = SystemLog(
+                user_id=member.user_id,
+                activity_type='login',
+                organization_id=member.organization_id,
+                details=json.dumps({
+                    'action': f'{member.user_type}_login',
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'status': 'success',
+                    'user_email': member.email,
+                    'user_type': member.user_type
+                })
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+
+            # Initialize services for OC upon first login
+            if member.user_type == 'OC':
+                # Check if organization has any services
+                existing_services = db.session.execute(
+                    db.select(Service).filter_by(organization_id=member.organization_id)
+                ).first()
+                
+                if not existing_services:
+                    # Create basic services
+                    services = [
+                        {'type': 'S', 'name': 'Thesis Search', 'path': '/hw/thesis/search'},
+                        {'type': 'P', 'name': 'Thesis PDF', 'path': '/hw/thesis/pdf'},
+                        {'type': 'A', 'name': 'Student Authentication', 'path': '/hw/student/authenticate'},
+                        {'type': 'R', 'name': 'Student Records', 'path': '/hw/student/record'},
+                        {'type': 'M', 'name': 'Money Transfer', 'path': '/hw/bank/transfer'}
+                    ]
+                    # Initialize each service
+                    for service in services:
+                        new_service = Service(
+                            organization_id=member.organization_id,
+                            service_type=service['type'],
+                            status=0,  # Initial status as unconfigured
+                            cost=0,
+                            path=service['path'],
+                            method='POST',  # Default to POST method
+                            url='',  # To be configured by OC
+                            input_data='{}',  # Default empty JSON
+                            output_data='{}'  # Default empty JSON
+                        )
+                        db.session.add(new_service)
+                    db.session.commit()
+
+            flash('登录成功', 'success')
+            print(f"Session user_type set to: {session['user_type']}")  # 调试信息
+            return redirect(url_for('user.dashboard', user_type=session['user_type']))
 
     return render_template('login.html')

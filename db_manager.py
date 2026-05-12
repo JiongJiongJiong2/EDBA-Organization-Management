@@ -187,7 +187,7 @@ class DBManager:
                     'organization_id': 0,
                     'service_type': 'M',
                     'status': 2,  # Configured
-                    'url': 'http://172.16.160.88:8001',
+                    'url': os.environ.get('BANK_SERVICE_URL', 'http://localhost:8001'),
                     'path': '/hw/bank/transfer',
                     'method': 'POST',
                     'input_data': '{}',
