@@ -4,43 +4,68 @@ A Flask-based organization management system for managing members, services, and
 
 > **Note**: This project was developed in early 2025 as a group assignment for the **Advanced Software Development Workshop** course during my junior year (Year 3) of undergraduate studies. It was built by a team of students as a course project and is not intended for production use. The codebase reflects the learning process and time constraints of a university course project.
 
+
 ## Features
 
-- **User Authentication**: Email verification code-based login system
-- **Multi-role User Management**: Supports various user types (OC, TT, EE, SE, PP, PC, CC)
-- **Organization Management**: Create and manage organizations
-- **Service Configuration**: Configure and manage various services (Thesis Search, PDF Download, Course Info, etc.)
-- **Application System**: O-Convener registration application workflow
-- **Policy Management**: Create and manage organizational policies
+- **🔐 Advanced Authentication**: Email verification code system with session-based security
+- **👥 Multi-Role Architecture**: Granular access control (OC, TT, EE, SE, PP, PC, CC)
+- **🏢 Organization Management**: Full CRUD operations for organizational entities
+- **⚙️ Service Configuration Engine**: Dynamic management of enterprise services
+- **📋 Intelligent Application Workflow**: O-Convener registration pipeline
+- **📜 Policy Management System**: Centralized organizational policy engine
 
-## User Types
+## User Role Matrix
 
-### Admin Roles
-- **OC (O-Convener)**: Organization convener
-- **TT (T-admin)**: Thesis admin
-- **EE (E-admin)**: Executive admin
-- **SE (Senior E-admin)**: Senior executive admin
+### **Admin Tier**
+| Role | Title                        | Privilege Level |
+|------|------------------------------|-----------------|
+| **OC** | O-Convener                   | Highest        |
+| **TT** | Thesis Administrator         | High           |
+| **EE** | Executive Administrator      | High           |
+| **SE** | Senior Executive Administrator | Elevated     |
 
-### Normal User Roles
-- **PP (Data Provider)**: Data provider
-- **PC (Public Data Consumer)**: Public data consumer
-- **CC (Private Data Consumer)**: Private data consumer
+### **Operational Tier**
+| Role | Title                        | Access Type     |
+|------|------------------------------|-----------------|
+| **PP** | Data Provider                | Write          |
+| **PC** | Public Data Consumer         | Read (Public)  |
+| **CC** | Private Data Consumer        | Read (Restricted) |
 
-## Service Types
+## Service Ecosystem
 
-- **S**: Thesis search
-- **P**: PDF download
-- **C**: Course info
-- **A**: Student authentication
-- **R**: Student GPA record and year info
-- **M**: Money transfer
+| Code | Service                    | Description                     |
+|------|---------------------------|---------------------------------|
+| **S** | Thesis Search             | Intelligent document retrieval |
+| **P** | PDF Download              | Secure document distribution   |
+| **C** | Course Information        | Academic data hub              |
+| **A** | Student Authentication    | Identity verification          |
+| **R** | GPA & Academic Records    | Performance analytics          |
+| **M** | Money Transfer            | Financial transaction gateway  |
 
-## Installation
+---
+
+## Quick Start
 
 ### Prerequisites
+- **Python 3.8+**
+- **pip** package manager
 
-- Python 3.8+
-- pip
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone <repository-url>
+cd src
+
+# 2. Create virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment
+cp .env.example .env
 
 ### Setup
 
